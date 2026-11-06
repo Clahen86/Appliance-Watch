@@ -120,8 +120,9 @@ class Detector:
 
     @property
     def low_w(self) -> float:
-        """A quiet programme (a cold rinse at 5-15 W) is above this - well over standby, under a pump or motor."""
-        return max(4.0, self.off_w * 2)
+        """A quiet programme (a cold rinse at 9-15 W) is above this - over standby and a lit display (2-4 W),
+        under a pump or motor."""
+        return max(7.0, self.off_w * 3)
 
     def _act(self) -> float:
         """Above this the running cycle is doing something: low for a quiet programme, until it shows more."""
@@ -214,7 +215,7 @@ class Detector:
             return events
         quiet = t - c["last_active"] if (self.w is None or self.w < self._act()) else 0.0
         if not self.confirmed:
-            low_start = self._low() and c["active_s"] >= 180 and c["wh"] >= 0.4
+            low_start = self._low() and c["active_s"] >= 180 and c["wh"] >= 0.6
             if c["heat_s"] > 0 or (c["wh"] >= START_WH and t - c["start"] >= 60) or low_start:
                 self.confirmed = True
                 self.state = STATE_RUNNING

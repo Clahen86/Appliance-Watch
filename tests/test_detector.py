@@ -63,7 +63,7 @@ def test_dishwasher_learned_is_faster():
 
 
 def test_washer_and_dryer():
-    for kind, starts in (("washer", ["10-29 15:00", "10-29 20:24", "10-30 12:08"]),
+    for kind, starts in (("washer", ["10-29 15:01", "10-29 20:24", "10-30 12:09"]),
                          ("dryer", ["10-28 20:48", "10-29 21:36", "10-30 15:17"])):
         finished, events = run(kind)
         assert [local(c["start"]) for _, c in finished] == starts, kind
@@ -188,7 +188,8 @@ def test_quiet_rinse_programme():
             t += 30
             events.extend(d.tick(t))
     at(0.2, 10)
-    at(3, 0.5)
+    at(4, 20)  # the display is on while it is loaded: not a programme
+    assert d.state == STATE_OFF
     at(12, 15)
     assert d.state == STATE_RUNNING
     at(0.2, 15)

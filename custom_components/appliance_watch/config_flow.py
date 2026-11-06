@@ -101,7 +101,8 @@ class ApplianceWatchFlow(ConfigFlow, domain=DOMAIN):
         return await self.async_step_details()
 
     async def _chosen(self, power: str) -> ConfigFlowResult:
-        await self.async_set_unique_id(power)
+        # A machine that was also discovered: this flow takes over (the discovered one goes away when it's added).
+        await self.async_set_unique_id(power, raise_on_progress=False)
         self._abort_if_unique_id_configured()
         self._power = power
         self._defaults = _guess(self.hass, power)

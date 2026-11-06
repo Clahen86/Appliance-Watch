@@ -22,6 +22,8 @@ const T = {
     title: "Appliances", settings: "Settings", back: "Back", menu: "Menu", saved: "Saved ✓", add: "Add machine",
     found: "Found in your home", addIt: "Add", running: "running", done: "done", ready: "All ready", month: "This month",
     cycles: "cycles", sinceStart: "so far", last: "Last", soon: "any minute", min: "min", now: "now",
+    isDone: "is done", isRunning: "is running", allReady: "All machines are ready", readySub: "Start one - it's watched from the first minute.",
+    more: "More", close: "Close",
     which: "Which programme was it?", whichNow: "Which programme is running?", own: "Your own name…",
     newProgram: "New programme, e.g. Pre-rinse", addProgram: "Add", noPrograms: "No programmes yet.", whichHint: "Tell it once - next time it knows by itself.", other: "Other…", name: "Name",
     ok: "OK", ai: "✨ Suggest", aiExplain: "✨ Explain", programs: "Programmes", history: "History", noHistory: "No cycles yet - start the machine.",
@@ -41,6 +43,8 @@ const T = {
     title: "Maskiner", settings: "Indstillinger", back: "Tilbage", menu: "Menu", saved: "Gemt ✓", add: "Tilføj maskine",
     found: "Fundet i dit hjem", addIt: "Tilføj", running: "kører", done: "færdig", ready: "Alle er klar", month: "Denne måned",
     cycles: "vaske", sinceStart: "indtil nu", last: "Sidst", soon: "om lidt", min: "min", now: "nu",
+    isDone: "er færdig", isRunning: "kører", allReady: "Alle maskiner er klar", readySub: "Start en - den bliver fulgt fra første minut.",
+    more: "Mere", close: "Luk",
     which: "Hvilket program var det?", whichNow: "Hvilket program kører den?", own: "Eget navn…",
     newProgram: "Nyt program, fx Skyl", addProgram: "Tilføj", noPrograms: "Ingen programmer endnu.", whichHint: "Sig det én gang - næste gang ved den det selv.", other: "Andet…", name: "Navn",
     ok: "OK", ai: "✨ Foreslå", aiExplain: "✨ Forklar", programs: "Programmer", history: "Historik", noHistory: "Ingen vaske endnu - start maskinen.",
@@ -147,7 +151,8 @@ class ApplianceWatchPanel extends HTMLElement {
     const focus = r.activeElement?.dataset?.keep;
     const y = window.scrollY;
     const v = this._view === "settings" ? this._settingsView() : this._view === "machine" ? this._machineView() : this._listView();
-    r.innerHTML = `${this._css()}<style>${MACHINE_CSS}</style>${v}<div class="toast"></div>`;
+    r.innerHTML = `${this._css()}<style>${MACHINE_CSS}</style>${v}<div id="sheetbox"></div><div class="toast"></div>`;
+    this._sheetOpen = null;
     r.querySelectorAll("details[data-key]").forEach((d) => open.has(d.dataset.key) && (d.open = true));
     r.querySelectorAll("input[data-keep]").forEach((i) => i.dataset.keep in typed && (i.value = typed[i.dataset.keep]));
     if (focus) r.querySelector(`input[data-keep="${focus}"]`)?.focus();
@@ -169,15 +174,34 @@ class ApplianceWatchPanel extends HTMLElement {
     const t = this.t, ms = this._machines;
     const running = ms.filter((m) => m.state === "running" || m.state === "finishing").length;
     const done = ms.filter((m) => m.state === "finished").length;
-    const pills = [running ? `<span class="pill run">● ${running} ${t.running}</span>` : "", done ? `<span class="pill ok">✓ ${done} ${t.done}</span>` : ""].join("");
+    const pills = [running ? `<span class="pill">● ${running} ${t.running}</span>` : "", done ? `<span class="pill">✓ ${done} ${t.done}</span>` : ""].join("");
     const found = (this._found || []).map((f) => `<div class="found"><span class="fk">${machineSVG(f.kind, "off", { uid: "f" + f.entity_id.replace(/\W/g, "") })}</span>
       <div><b>${esc(f.name)}</b><div class="muted">${esc(f.entity_id)}</div></div><button class="primary" data-act="addflow">${t.addIt}</button></div>`).join("");
+    const h = this._headline();
     return `${this._bar(t.title)}<main>
-      <div class="hero"><div><h2>${running || done ? pills : t.ready}</h2></div>
-        ${this._admin ? `<button class="ghost" data-act="addflow">+ ${t.add}</button>` : ""}</div>
+      <div class="hero" style="--a:${h.color}"><i class="blob b1"></i><i class="blob b2"></i>
+        <div class="htxt"><div class="hk">${h.kicker}</div><h2>${h.title}</h2><div class="hs">${h.sub}</div>
+          <div class="pills">${pills}</div></div>
+        ${this._admin ? `<button class="glass" data-act="addflow">+ ${t.add}</button>` : ""}</div>
       ${ms.length ? `<div class="grid">${ms.map((m) => this._card(m)).join("")}</div>` : `<div class="empty">${machineSVG("washer", "off", { uid: "e" })}<p>${this.w.noMachines}</p></div>`}
       ${found ? `<section><h3>🔎 ${t.found}</h3>${found}</section>` : ""}
     </main>`;
+  }
+
+  _headline() {
+    const t = this.t, w = this.w, ms = this._machines;
+    const d = new Date().toLocaleDateString(this.L === "da" ? "da-DK" : undefined, { weekday: "long", day: "numeric", month: "long" });
+    const today = d.charAt(0).toUpperCase() + d.slice(1);
+    const fin = ms.find((m) => m.state === "finished");
+    if (fin) return { kicker: today, title: `${esc(fin.name)} ${t.isDone}`, sub: w.waiting, color: "#22c55e" };
+    const run = ms.filter((m) => m.state === "running" || m.state === "finishing")
+      .sort((a, b) => (a.finish_time ? new Date(a.finish_time) : 9e15) - (b.finish_time ? new Date(b.finish_time) : 9e15))[0];
+    if (run) {
+      const left = minutesLeft(run.finish_time);
+      return { kicker: today, title: run.finish_time ? `${esc(run.name)} ${w.doneAt} ${clock(run.finish_time)}` : `${esc(run.name)} ${t.isRunning}`,
+        sub: run.finish_time ? `${hm(left)} ${w.left}${run.program ? " · " + esc(run.program) : ""}` : w.unknownTime, color: ACCENT[run.kind] };
+    }
+    return { kicker: today, title: t.allReady, sub: ms.length ? t.readySub : "", color: "#6366f1" };
   }
 
   _status(m) {
@@ -228,11 +252,11 @@ class ApplianceWatchPanel extends HTMLElement {
     const f = this._full[m.entry_id];
     const s = this._status(m);
     const active = m.state === "running" || m.state === "finishing";
-    const head = `<div class="detail-head" style="--a:${ACCENT[m.kind]}">
-      <div class="big">${machineSVG(m.kind, m.state, { display: display(m), uid: "d" + m.entry_id.slice(-6) })}</div>
+    const head = `<div class="detail-head s-${m.state}" style="--a:${m.state === "finished" ? "#22c55e" : ACCENT[m.kind]}"><i class="blob b1"></i><i class="blob b2"></i>
+      <div class="duo"><div class="big">${machineSVG(m.kind, m.state, { display: display(m), uid: "d" + m.entry_id.slice(-6) })}</div>
+        ${active ? this._ring(m) : ""}</div>
       <div class="info"><div class="state">${w.states[m.state]}</div><div class="main xl" id="main">${s.main}</div>
-        <div class="sub muted" id="sub">${esc(s.sub)}</div>
-        ${active ? `<div class="progress" id="prog"><span style="width:${m.progress || 0}%"></span></div>` : ""}
+        <div class="sub" id="sub">${esc(s.sub)}</div>
         <div class="chips">${active ? `<span class="chip prog">${esc(m.program || w.unknownTime)}</span>` : ""}
           ${active && m.live_cost != null ? `<span class="chip" id="cost">${money(m.live_cost, m.currency)} ${t.sinceStart}</span>` : ""}
           ${active ? `<span class="chip" id="watt">⚡ ${Math.round(m.power || 0)} ${t.watts}</span>` : ""}</div>
@@ -277,11 +301,7 @@ class ApplianceWatchPanel extends HTMLElement {
       const usual = st ? `${t.usual} ${dur(st.duration, this.L)} · ${num(st.wh / 1000, this.L)} kWh${st.cost != null ? " · " + money(st.cost, m.currency) : ""}` : "";
       return `<div class="prog-row"><div class="pname"><b>${esc(p.name)}</b>${p.named ? "" : ` <span class="auto">auto</span>`}
         <div class="muted">${usual}${usual ? " · " : ""}${t.learned} ${st ? st.count : 0}/${p.count}</div></div>
-        <details class="menu" data-key="prog-${p.id}"><summary>⋯</summary><div class="pop">
-          <div class="inline"><input data-rename="${p.id}" data-keep="rename-${p.id}" value="${esc(p.named ? p.name : "")}" placeholder="${t.rename}"><button class="primary sm" data-act="rename" data-program="${p.id}">${t.ok}</button></div>
-          ${this._hasAi ? `<button class="ghost sm" data-act="ainame" data-program="${p.id}">${t.ai}</button>` : ""}
-          ${f.programs.length > 1 ? `<select data-merge="${p.id}"><option value="">${t.merge}</option>${f.programs.filter((o) => o.id !== p.id).map((o) => `<option value="${o.id}">${esc(o.name)}</option>`).join("")}</select>` : ""}
-          <button class="ghost sm danger" data-act="forget" data-program="${p.id}">${t.forget}</button></div></details></div>`;
+        <button class="dots" data-act="sheet" data-kind="prog" data-id="${p.id}" aria-label="${t.more}">⋯</button></div>`;
     }).join("") || `<div class="muted">${t.noPrograms}</div>`}${add}</section>`;
   }
 
@@ -292,10 +312,7 @@ class ApplianceWatchPanel extends HTMLElement {
       const flags = [c.resumed ? `<span class="tag">⏸ ${t.resumed}</span>` : "", c.clean === false ? `<span class="tag grey">${t.unclear}: ${t.reasons[c.reason] || c.reason}</span>` : ""].join("");
       return `<div class="hist"><div class="spark">${this._chart(c.curve, m.kind, 28, true)}</div>
         <div class="hmain"><b>${esc(c.program || "–")}</b> <span class="muted">${when}</span><div class="muted">${dur(c.duration, this.L)} · ${num(c.kwh, this.L)} kWh${c.cost != null ? " · " + money(c.cost, m.currency) : ""} ${flags}</div></div>
-        <details class="menu" data-key="hist-${c.id}"><summary>⋯</summary><div class="pop">
-          <select data-relabel="${c.id}"><option value="">${t.changeProgram}</option>${f.programs.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>
-          ${this._hasAi ? `<button class="ghost sm" data-act="explain" data-cycle="${c.id}">${t.aiExplain}</button>` : ""}
-          <button class="ghost sm danger" data-act="delcycle" data-cycle="${c.id}">${t.del}</button></div></details></div><div class="explain" data-for="${c.id}"></div>`;
+        <button class="dots" data-act="sheet" data-kind="hist" data-id="${c.id}" aria-label="${t.more}">⋯</button></div><div class="explain" data-for="${c.id}"></div>`;
     }).join("");
     return `<section class="card"><h3>${t.history}</h3>${rows || `<div class="muted">${t.noHistory}</div>`}</section>`;
   }
@@ -316,6 +333,13 @@ class ApplianceWatchPanel extends HTMLElement {
     </section>`;
   }
 
+  _ring(m) {
+    const r = 52, c = 2 * Math.PI * r, p = m.progress ?? 0, left = minutesLeft(m.finish_time);
+    return `<div class="ring"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="${r}"/>
+      <circle class="val" id="ringval" cx="60" cy="60" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - p / 100)}"/></svg>
+      <div class="rt"><b id="left">${left == null ? "…" : left >= 60 ? hm(left) : left}</b><span>${left == null || left >= 60 ? "" : "min"}</span></div></div>`;
+  }
+
   _chart(values, kind, height, small = false) {
     if (!values || values.length < 2) return "";
     const max = Math.max(...values, 1), n = values.length, wdt = 300;
@@ -332,9 +356,56 @@ class ApplianceWatchPanel extends HTMLElement {
     set("sub", esc(s.sub));
     if (m.live_cost != null) set("cost", `${money(m.live_cost, m.currency)} ${this.t.sinceStart}`);
     set("watt", `⚡ ${Math.round(m.power || 0)} ${this.t.watts}`);
-    const p = r.querySelector("#prog span");
-    if (p) p.style.width = `${m.progress || 0}%`;
+    const ring = r.getElementById("ringval");
+    if (ring) ring.setAttribute("stroke-dashoffset", 2 * Math.PI * 52 * (1 - (m.progress || 0) / 100));
+    const left = minutesLeft(m.finish_time);
+    set("left", left == null ? "…" : left >= 60 ? hm(left) : String(left));
     r.querySelectorAll(".aw-display").forEach((el) => (el.textContent = display(m)));
+  }
+
+  // ---------- the sheet that slides up (menus that are always fully visible) ----------
+
+  _openSheet(kind, id) {
+    const t = this.t, f = this._full[this._open], m = this._machines.find((x) => x.entry_id === this._open);
+    if (!f || !m) return;
+    let title = "", body = "";
+    if (kind === "prog") {
+      const p = f.programs.find((x) => x.id === id);
+      if (!p) return;
+      title = esc(p.name);
+      const others = f.programs.filter((o) => o.id !== id);
+      body = `<div class="lbl">${t.rename}</div><div class="inline"><input id="sheetname" value="${esc(p.named ? p.name : "")}" placeholder="${t.name}">
+          <button class="primary" data-act="rename" data-program="${id}">${t.ok}</button></div>
+        ${this._hasAi ? `<button class="wide soft" data-act="ainame" data-program="${id}">${t.ai}</button>` : ""}
+        ${others.length ? `<div class="lbl">${t.merge}</div><div class="chips">${others.map((o) => `<button class="chip btn" data-act="merge" data-program="${id}" data-into="${o.id}">${esc(o.name)}</button>`).join("")}</div>` : ""}
+        <button class="wide danger" data-act="forget" data-program="${id}">🗑 ${t.forget}</button>`;
+    } else {
+      const c = f.history.find((x) => x.id === id);
+      if (!c) return;
+      title = `${esc(c.program || "–")} · ${new Date(c.start).toLocaleString(this.L === "da" ? "da-DK" : undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })}`;
+      const named = f.programs.filter((p) => p.named), have = new Set(named.map((p) => p.name.toLowerCase()));
+      const ideas = (SUGGEST[this.L][m.kind] || []).filter((n) => !have.has(n.toLowerCase()));
+      body = `<div class="lbl">${t.changeProgram}</div><div class="chips">
+          ${named.map((p) => `<button class="chip btn ${p.id === c.program_id ? "on" : ""}" data-act="label" data-cycle="${id}" data-program="${p.id}">${esc(p.name)}</button>`).join("")}
+          ${ideas.map((n) => `<button class="chip btn idea" data-act="labelname" data-cycle="${id}" data-name="${esc(n)}">${esc(n)}</button>`).join("")}</div>
+        ${this._hasAi ? `<button class="wide soft" data-act="explain" data-cycle="${id}">${t.aiExplain}</button><div class="explain" data-for="${id}"></div>` : ""}
+        <button class="wide danger" data-act="delcycle" data-cycle="${id}">🗑 ${t.del}</button>`;
+    }
+    const box = this.shadowRoot.getElementById("sheetbox");
+    box.innerHTML = `<div class="sheet-bg" data-act="closesheet"></div><div class="sheet" role="dialog"><div class="grab"></div>
+      <div class="sheet-head"><h3>${title}</h3><button class="x" data-act="closesheet" aria-label="${t.close}">✕</button></div>${body}</div>`;
+    this._sheetOpen = { kind, id };
+    this._wire(box);
+  }
+
+  _closeSheet() {
+    const box = this.shadowRoot.getElementById("sheetbox");
+    const sheet = box?.querySelector(".sheet");
+    if (!sheet) return;
+    sheet.classList.add("out");
+    box.querySelector(".sheet-bg").classList.add("out");
+    this._sheetOpen = null;
+    setTimeout(() => (box.innerHTML = ""), 220);
   }
 
   // ---------- settings ----------
@@ -380,8 +451,7 @@ class ApplianceWatchPanel extends HTMLElement {
 
   // ---------- events ----------
 
-  _wire() {
-    const r = this.shadowRoot;
+  _wire(r = this.shadowRoot) {
     r.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", (e) => {
       if (e.target.closest("button")) return;
       this._open = el.dataset.open;
@@ -394,8 +464,8 @@ class ApplianceWatchPanel extends HTMLElement {
     r.querySelectorAll("[data-merge]").forEach((el) => el.addEventListener("change", () => el.value && this._cmd("merge_program", { program: el.dataset.merge, into: el.value })));
     r.querySelectorAll("[data-relabel]").forEach((el) => el.addEventListener("change", () => el.value && this._cmd("label", { cycle_id: el.dataset.relabel, program: el.value })));
     r.querySelectorAll("[data-ms]").forEach((el) => el.addEventListener("change", () => this._cmd("machine_settings", { [el.dataset.ms]: el.value || null }, true)));
-    r.getElementById("newname")?.addEventListener("keydown", (e) => e.key === "Enter" && r.querySelector('[data-act="labelnew"]').click());
-    r.getElementById("addprog")?.addEventListener("keydown", (e) => e.key === "Enter" && r.querySelector('[data-act="addprog"]').click());
+    r.querySelector("#newname")?.addEventListener("keydown", (e) => e.key === "Enter" && r.querySelector('[data-act="labelnew"]').click());
+    r.querySelector("#addprog")?.addEventListener("keydown", (e) => e.key === "Enter" && r.querySelector('[data-act="addprog"]').click());
   }
 
   async _cmd(type, data, reload = false) {
@@ -429,6 +499,9 @@ class ApplianceWatchPanel extends HTMLElement {
       case "finish": return this._cmd("finish", {});
       case "dismiss": return this._cmd("dismiss", { index: Number(el.dataset.i) });
       case "label": return this._cmd("label", { cycle_id: el.dataset.cycle, program: el.dataset.program });
+      case "sheet": return this._openSheet(el.dataset.kind, el.dataset.id);
+      case "closesheet": return this._closeSheet();
+      case "merge": return this._cmd("merge_program", { program: el.dataset.program, into: el.dataset.into });
       case "labelname": return this._cmd("label", { cycle_id: el.dataset.cycle, name: el.dataset.name });
       case "addprog": {
         const name = r.getElementById("addprog").value.trim();
@@ -440,7 +513,7 @@ class ApplianceWatchPanel extends HTMLElement {
         return name && this._cmd("label", { cycle_id: el.dataset.cycle, name });
       }
       case "rename": {
-        const name = r.querySelector(`[data-rename="${el.dataset.program}"]`).value.trim();
+        const name = (r.getElementById("sheetname") || r.querySelector(`[data-rename="${el.dataset.program}"]`)).value.trim();
         return name && this._cmd("rename_program", { program: el.dataset.program, name });
       }
       case "forget": return this._cmd("forget_program", { program: el.dataset.program });
@@ -452,12 +525,12 @@ class ApplianceWatchPanel extends HTMLElement {
         const res = await this._ws({ type: "appliance_watch/ai_name", entry_id: this._open, program: el.dataset.program });
         el.disabled = false;
         el.textContent = this.t.ai;
-        const box = r.getElementById("newname") || r.querySelector(`[data-rename="${el.dataset.program}"]`);
+        const box = r.getElementById("sheetname") || r.getElementById("newname");
         if (res.name && box) { box.value = res.name; box.focus(); }
         return;
       }
       case "explain": {
-        const box = r.querySelector(`.explain[data-for="${el.dataset.cycle}"]`);
+        const box = r.querySelector(`#sheetbox .explain[data-for="${el.dataset.cycle}"]`) || r.querySelector(`.explain[data-for="${el.dataset.cycle}"]`);
         if (box) box.textContent = "✨ …";
         const res = await this._ws({ type: "appliance_watch/ai_explain", entry_id: this._open, cycle_id: el.dataset.cycle });
         if (box) box.textContent = res.text || "–";
@@ -591,6 +664,83 @@ class ApplianceWatchPanel extends HTMLElement {
       .toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%, 80px); background:#323232; color:#fff; padding:10px 18px;
         border-radius:12px; font-size:14px; opacity:0; transition:.25s; z-index:9; max-width:90vw; }
       .toast.show { transform:translate(-50%, 0); opacity:1; } .toast.bad { background:#e5484d; }
+
+      /* ---------- the WOW layer ---------- */
+      @property --ang { syntax:"<angle>"; initial-value:0deg; inherits:false; }
+      .hero { position:relative; overflow:hidden; border-radius:28px; padding:26px 22px; margin:4px 0 20px; color:#fff; isolation:isolate;
+        background:linear-gradient(135deg, color-mix(in srgb, var(--a) 92%, #000) 0%, color-mix(in srgb, var(--a) 70%, #7c3aed) 100%);
+        box-shadow:0 18px 40px -18px color-mix(in srgb, var(--a) 70%, transparent); align-items:flex-end; }
+      .blob { position:absolute; border-radius:50%; filter:blur(30px); opacity:.55; z-index:-1; pointer-events:none; }
+      .blob.b1 { width:220px; height:220px; background:#fff; top:-90px; right:-40px; opacity:.22; animation:float 9s ease-in-out infinite; }
+      .blob.b2 { width:180px; height:180px; background:color-mix(in srgb, var(--a) 60%, #22d3ee); bottom:-80px; left:-30px; animation:float 11s ease-in-out infinite reverse; }
+      @keyframes float { 0%,100% { transform:translate(0,0) scale(1); } 50% { transform:translate(-24px,18px) scale(1.15); } }
+      .htxt { flex:1; min-width:0; }
+      .hk { font-size:13px; opacity:.85; letter-spacing:.02em; }
+      .hero h2 { font-size:28px; font-weight:800; line-height:1.15; margin:4px 0 6px; display:block; letter-spacing:-.01em; }
+      .hs { font-size:15px; opacity:.92; }
+      .hero .pills { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+      .hero .pill { background:rgba(255,255,255,.2); color:#fff; backdrop-filter:blur(6px); font-size:13px; }
+      button.glass { font:inherit; font-weight:600; font-size:14px; color:#fff; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.4);
+        border-radius:16px; padding:10px 14px; cursor:pointer; backdrop-filter:blur(8px); white-space:nowrap; align-self:flex-start; }
+      .grid .card { border:2px solid transparent; border-radius:26px; padding:14px 16px 14px 10px; }
+      .grid .card.m-running, .grid .card.m-finishing {
+        background:linear-gradient(var(--card-background-color), var(--card-background-color)) padding-box,
+          conic-gradient(from var(--ang), var(--a), color-mix(in srgb, var(--a) 10%, transparent) 25%, transparent 50%, color-mix(in srgb, var(--a) 10%, transparent) 75%, var(--a)) border-box;
+        animation:in .3s ease both, orbit 3.5s linear infinite; box-shadow:0 12px 32px -14px color-mix(in srgb, var(--a) 65%, transparent); }
+      @keyframes orbit { to { --ang:360deg; } }
+      .grid .card.m-finished { border-color:#22c55e; animation:in .3s ease both, glowg 2.4s ease-in-out infinite; }
+      @keyframes glowg { 0%,100% { box-shadow:0 0 0 0 rgba(34,197,94,.0), 0 10px 30px -14px rgba(34,197,94,.6); } 50% { box-shadow:0 0 0 6px rgba(34,197,94,.12), 0 10px 30px -14px rgba(34,197,94,.6); } }
+      .art { width:120px; height:146px; }
+      .name { font-size:18px; letter-spacing:-.01em; }
+      .main { font-size:22px; letter-spacing:-.01em; }
+      .state { padding:3px 9px; border-radius:10px; background:color-mix(in srgb, var(--a) 14%, transparent); }
+      .m-finished .state { background:rgba(34,197,94,.15); } .m-off .state { background:var(--secondary-background-color); }
+      .progress { height:10px; border-radius:8px; }
+      .detail-head { position:relative; overflow:hidden; isolation:isolate; flex-direction:column; text-align:center; gap:6px; border-radius:30px; padding:22px 18px;
+        color:#fff; background:linear-gradient(160deg, color-mix(in srgb, var(--a) 88%, #000), color-mix(in srgb, var(--a) 62%, #312e81));
+        box-shadow:0 22px 50px -22px color-mix(in srgb, var(--a) 75%, transparent); }
+      .detail-head .muted, .detail-head .sub { color:rgba(255,255,255,.88); }
+      .detail-head .state { background:rgba(255,255,255,.2); color:#fff; display:inline-block; }
+      .detail-head .chip { background:rgba(255,255,255,.18); color:#fff; }
+      .detail-head .chip.prog { background:rgba(255,255,255,.28); }
+      .duo { display:flex; align-items:center; justify-content:center; gap:22px; }
+      .detail-head .big { width:150px; height:183px; filter:drop-shadow(0 18px 24px rgba(0,0,0,.35)); }
+      .ring { position:relative; width:138px; height:138px; flex:none; }
+      .ring svg { width:100%; height:100%; transform:rotate(-90deg); }
+      .ring circle { fill:none; stroke-width:10; }
+      .ring .track { stroke:rgba(255,255,255,.18); }
+      .ring .val { stroke:#fff; stroke-linecap:round; transition:stroke-dashoffset 1s ease; filter:drop-shadow(0 0 6px rgba(255,255,255,.6)); }
+      .rt { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+      .rt b { font-size:38px; font-weight:800; line-height:1; letter-spacing:-.02em; } .rt span { font-size:13px; opacity:.85; margin-top:2px; }
+      .detail-head .main.xl { font-size:30px; font-weight:400; margin-top:4px; } .detail-head .chips, .detail-head .actions { justify-content:center; }
+      .detail-head button.primary { background:#fff; color:color-mix(in srgb, var(--a) 80%, #000); border-color:#fff; font-weight:700; }
+      .detail-head button.ghost { background:rgba(255,255,255,.14); color:#fff; border-color:rgba(255,255,255,.5); }
+      section.card { border-radius:24px; padding:18px; overflow:visible; }
+      section.card h3 { font-size:17px; letter-spacing:-.01em; }
+      .stats div { border-radius:20px; background:linear-gradient(160deg, var(--card-background-color), color-mix(in srgb, var(--primary-color) 6%, var(--card-background-color))); }
+      .stats b { font-size:24px; letter-spacing:-.02em; }
+      .ask { border:0; background:linear-gradient(var(--card-background-color), var(--card-background-color)) padding-box,
+        linear-gradient(135deg, var(--primary-color), #a855f7) border-box; border:2px solid transparent; }
+      button.ghost { background:color-mix(in srgb, var(--primary-color) 10%, transparent); }
+      .chip.btn { font-weight:500; } .chip.btn:active, button:active { transform:scale(.96); }
+      .dots { width:40px; height:40px; flex:none; border-radius:14px; border:0; cursor:pointer; font-size:22px; line-height:1;
+        background:var(--secondary-background-color); color:var(--primary-text-color); }
+      #sheetbox { position:relative; z-index:20; }
+      .sheet-bg { position:fixed; inset:0; background:rgba(0,0,0,.45); backdrop-filter:blur(3px); animation:fade .2s ease both; z-index:20; }
+      .sheet { position:fixed; left:0; right:0; bottom:0; margin:0 auto; max-width:560px; z-index:21; box-sizing:border-box;
+        background:var(--card-background-color); border-radius:28px 28px 0 0; padding:10px 18px calc(22px + env(safe-area-inset-bottom));
+        box-shadow:0 -12px 40px rgba(0,0,0,.3); animation:up .26s cubic-bezier(.2,.9,.3,1.1) both; max-height:82vh; overflow:auto; }
+      .sheet.out { animation:down .2s ease forwards; } .sheet-bg.out { animation:fade .2s ease reverse forwards; }
+      @keyframes up { from { transform:translateY(100%); } } @keyframes down { to { transform:translateY(100%); } } @keyframes fade { from { opacity:0; } }
+      .grab { width:42px; height:5px; border-radius:3px; background:var(--divider-color); margin:2px auto 10px; }
+      .sheet-head { display:flex; align-items:center; gap:10px; } .sheet-head h3 { flex:1; margin:0; font-size:19px; }
+      .x { width:36px; height:36px; border-radius:50%; border:0; background:var(--secondary-background-color); color:var(--primary-text-color); font-size:16px; cursor:pointer; }
+      button.wide { display:block; width:100%; margin-top:14px; font:inherit; font-size:16px; font-weight:600; padding:14px; border-radius:16px; border:0; cursor:pointer; }
+      button.wide.soft { background:color-mix(in srgb, var(--primary-color) 14%, transparent); color:var(--primary-color); }
+      button.wide.danger { background:rgba(229,72,77,.12); color:#e5484d; }
+      .sheet .chips .chip.btn { font-size:15px; padding:9px 15px; }
+      @media (max-width:600px) { .hero h2 { font-size:24px; } .art { width:104px; height:127px; } .duo { gap:14px; }
+        .detail-head .big { width:128px; height:156px; } .ring { width:120px; height:120px; } .rt b { font-size:32px; } }
       @media (max-width:600px) {
         main { padding:12px; } .grid { grid-template-columns:1fr; } .art { width:96px; height:117px; }
         .detail-head { flex-direction:column; text-align:center; gap:10px; } .detail-head .big { width:150px; height:183px; }

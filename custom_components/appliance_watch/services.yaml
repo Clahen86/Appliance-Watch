@@ -1,0 +1,19 @@
+set_program:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: appliance_watch
+    program:
+      required: true
+      example: "Eco 50°"
+      selector:
+        text:
+emptied:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: appliance_watch

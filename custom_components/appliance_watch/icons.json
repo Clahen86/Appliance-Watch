@@ -1,0 +1,26 @@
+{
+  "entity": {
+    "sensor": {
+      "status": {
+        "default": "mdi:washing-machine",
+        "state": {
+          "off": "mdi:washing-machine-off",
+          "running": "mdi:washing-machine",
+          "finishing": "mdi:timer-sand",
+          "finished": "mdi:check-circle"
+        }
+      },
+      "program": { "default": "mdi:format-list-bulleted" },
+      "finish_time": { "default": "mdi:clock-check-outline" },
+      "remaining": { "default": "mdi:timer-outline" },
+      "progress": { "default": "mdi:progress-clock" },
+      "last_energy": { "default": "mdi:lightning-bolt" },
+      "last_cost": { "default": "mdi:cash" }
+    },
+    "button": { "emptied": { "default": "mdi:check-all" } }
+  },
+  "services": {
+    "set_program": { "service": "mdi:tag-outline" },
+    "emptied": { "service": "mdi:check-all" }
+  }
+}

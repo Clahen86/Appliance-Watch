@@ -1,0 +1,143 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Tilføj en maskine",
+        "description": "Vælg strømmålingen fra stikket, maskinen sidder i. Fundet til dig: {found}",
+        "data": {
+          "power_sensor": "Strøm"
+        },
+        "data_description": {
+          "power_sensor": "Et smart-stiks strøm i W. Alt andet lærer den ud fra den."
+        }
+      },
+      "details": {
+        "title": "Om maskinen",
+        "description": "Gættet ud fra {power} - ret det, der er forkert.",
+        "data": {
+          "name": "Navn",
+          "kind": "Maskine",
+          "door_sensor": "Dørsensor (valgfri)",
+          "energy_sensor": "Energimåler (valgfri)",
+          "switch": "Kontakt (valgfri)"
+        },
+        "data_description": {
+          "door_sensor": "Når døren åbnes: færdig og tømt med det samme.",
+          "energy_sensor": "Mere præcis energi og pris pr. vask.",
+          "switch": "Slukket = programmet sluttede."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Den maskine er allerede tilføjet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Maskinens indstillinger",
+        "data": {
+          "kind": "Maskine",
+          "door_sensor": "Dørsensor",
+          "energy_sensor": "Energimåler",
+          "switch": "Kontakt"
+        }
+      }
+    }
+  },
+  "selector": {
+    "kind": {
+      "options": {
+        "dishwasher": "Opvaskemaskine",
+        "washer": "Vaskemaskine",
+        "dryer": "Tørretumbler",
+        "other": "Andet"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Slukket",
+          "running": "Kører",
+          "finishing": "Bliver færdig",
+          "finished": "Færdig"
+        }
+      },
+      "program": {
+        "name": "Program"
+      },
+      "finish_time": {
+        "name": "Færdig kl."
+      },
+      "remaining": {
+        "name": "Tid tilbage"
+      },
+      "progress": {
+        "name": "Fremskridt"
+      },
+      "last_energy": {
+        "name": "Energi sidste vask"
+      },
+      "last_cost": {
+        "name": "Pris sidste vask"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Kører"
+      },
+      "problem": {
+        "name": "Problem"
+      }
+    },
+    "button": {
+      "emptied": {
+        "name": "Tømt"
+      }
+    }
+  },
+  "issues": {
+    "wear": {
+      "title": "{name} viser tegn på slid",
+      "description": "{text}"
+    }
+  },
+  "exceptions": {
+    "not_a_machine": {
+      "message": "Den entitet hører ikke til en maskine i Appliance Watch."
+    },
+    "no_cycle": {
+      "message": "Maskinen har ikke kørt endnu."
+    }
+  },
+  "services": {
+    "set_program": {
+      "name": "Angiv program",
+      "description": "Fortæl hvilket program den kørende (eller sidste) vask er - den lærer af det.",
+      "fields": {
+        "entity_id": {
+          "name": "Maskine",
+          "description": "En hvilken som helst entitet fra maskinen."
+        },
+        "program": {
+          "name": "Program",
+          "description": "Navnet, fx Øko 50°."
+        }
+      }
+    },
+    "emptied": {
+      "name": "Tømt",
+      "description": "Maskinen er tømt og klar til næste gang.",
+      "fields": {
+        "entity_id": {
+          "name": "Maskine",
+          "description": "En hvilken som helst entitet fra maskinen."
+        }
+      }
+    }
+  }
+}

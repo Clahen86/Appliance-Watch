@@ -1,0 +1,143 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Add a machine",
+        "description": "Pick the power reading of the plug the machine is on. Found for you: {found}",
+        "data": {
+          "power_sensor": "Power"
+        },
+        "data_description": {
+          "power_sensor": "A smart plug's power in W. Everything else is learned from it."
+        }
+      },
+      "details": {
+        "title": "About the machine",
+        "description": "Guessed from {power} - change what's wrong.",
+        "data": {
+          "name": "Name",
+          "kind": "Machine",
+          "door_sensor": "Door sensor (optional)",
+          "energy_sensor": "Energy meter (optional)",
+          "switch": "Switch (optional)"
+        },
+        "data_description": {
+          "door_sensor": "Opening the door = done and emptied, at once.",
+          "energy_sensor": "More exact energy and price per cycle.",
+          "switch": "Switched off = the programme ended."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This machine is already added."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Machine settings",
+        "data": {
+          "kind": "Machine",
+          "door_sensor": "Door sensor",
+          "energy_sensor": "Energy meter",
+          "switch": "Switch"
+        }
+      }
+    }
+  },
+  "selector": {
+    "kind": {
+      "options": {
+        "dishwasher": "Dishwasher",
+        "washer": "Washing machine",
+        "dryer": "Dryer",
+        "other": "Other"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Off",
+          "running": "Running",
+          "finishing": "Finishing",
+          "finished": "Done"
+        }
+      },
+      "program": {
+        "name": "Program"
+      },
+      "finish_time": {
+        "name": "Done at"
+      },
+      "remaining": {
+        "name": "Time left"
+      },
+      "progress": {
+        "name": "Progress"
+      },
+      "last_energy": {
+        "name": "Last cycle energy"
+      },
+      "last_cost": {
+        "name": "Last cycle cost"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Running"
+      },
+      "problem": {
+        "name": "Problem"
+      }
+    },
+    "button": {
+      "emptied": {
+        "name": "Emptied"
+      }
+    }
+  },
+  "issues": {
+    "wear": {
+      "title": "{name} is wearing",
+      "description": "{text}"
+    }
+  },
+  "exceptions": {
+    "not_a_machine": {
+      "message": "That entity isn't an Appliance Watch machine."
+    },
+    "no_cycle": {
+      "message": "The machine hasn't run yet."
+    }
+  },
+  "services": {
+    "set_program": {
+      "name": "Set program",
+      "description": "Tell which programme the running (or last) cycle is - it is learned from.",
+      "fields": {
+        "entity_id": {
+          "name": "Machine",
+          "description": "Any entity of the machine."
+        },
+        "program": {
+          "name": "Program",
+          "description": "Its name, e.g. Eco 50°."
+        }
+      }
+    },
+    "emptied": {
+      "name": "Emptied",
+      "description": "The machine is emptied and ready for the next load.",
+      "fields": {
+        "entity_id": {
+          "name": "Machine",
+          "description": "Any entity of the machine."
+        }
+      }
+    }
+  }
+}

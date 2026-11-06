@@ -200,3 +200,63 @@ async def test_unload(hass: HomeAssistant) -> None:
     entry = await _setup(hass)
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert not hass.data[DOMAIN].machines
+
+
+async def test_learns_from_history(hass: HomeAssistant) -> None:
+    """A new machine goes through the power readings Home Assistant already has (the real dishwasher's)."""
+    from datetime import datetime, timezone
+    from unittest.mock import MagicMock, patch
+
+    from homeassistant.core import State
+
+    from .conftest import readings
+
+    rows = [State(POWER, "unavailable" if w is None else str(w),
+                  last_changed=datetime.fromtimestamp(t, timezone.utc), last_updated=datetime.fromtimestamp(t, timezone.utc))
+            for t, w in readings("dishwasher")]
+    instance = MagicMock()
+    instance.async_add_executor_job = hass.async_add_executor_job
+    hass.config.components.add("recorder")
+    with patch("homeassistant.components.recorder.get_instance", return_value=instance), \
+         patch("homeassistant.components.recorder.history.state_changes_during_period", return_value={POWER: rows}):
+        entry = await _setup(hass)
+        await hass.async_block_till_done()
+    machine = entry.runtime_data
+    assert machine.imported
+    assert len(machine.cycles) == 6
+    assert all(c["by"] == "history" and c["clean"] for c in machine.cycles)
+    # The four 50-minute runs are one programme, the two long ones others
+    assert max(sum(1 for c in machine.cycles if c["program"] == p) for p in machine.programs) >= 4
+
+
+async def test_speakers(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> None:
+    """Done, nearly done and emptied are said as announcements; nothing at night; each can be switched off."""
+    from unittest.mock import patch
+
+    await hass.config.async_set_time_zone("Europe/Copenhagen")
+    freezer.move_to("2026-11-06 12:00:00+01:00")
+    play = async_mock_service(hass, "media_player", "play_media")
+    entry = await _setup(hass)
+    hub = hass.data[DOMAIN]
+    await hub.async_save_settings({"speakers": ["media_player.kokken"], "say_only_home": False,
+                                   "say": {"done": True, "soon": True, "remind": True, "dryer": True, "emptied": True, "started": False}})
+    with patch("custom_components.appliance_watch.speaker._media_id", side_effect=lambda h, text, engine: f"tts:{text}"):
+        await _run(hass, freezer, 1900, 3)
+        await _cycle(hass, freezer)
+        said = [c.data["media_content_id"] for c in play]
+        assert said and said[-1].startswith("tts:Opvaskemaskine is done")
+        assert all(c.data["announce"] and c.data["entity_id"] == ["media_player.kokken"] for c in play)
+        await hass.services.async_call(DOMAIN, "emptied", {"entity_id": "sensor.opvaskemaskine_status"}, blocking=True)
+        await hass.async_block_till_done()
+        assert play[-1].data["media_content_id"] == "tts:Thank you! Opvaskemaskine is ready again."
+        n = len(play)
+        # At night: quiet, said in the morning instead
+        freezer.move_to("2026-11-06 23:00:00+01:00")
+        await _run(hass, freezer, 0.3, 30)
+        await _run(hass, freezer, 1900, 3)
+        await _cycle(hass, freezer)
+        assert len(play) == n
+        assert entry.entry_id in hub.speaker.morning
+        # Switched off: nothing
+        await hub.async_save_settings({"say": {"done": False}})
+        assert not hub.speaker.wants("done")

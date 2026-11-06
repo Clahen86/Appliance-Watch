@@ -89,11 +89,11 @@ class Detector:
             return events
         if self.state == STATE_FINISHED:
             self.door_opened = True
-            return events + self._emptied()
+            return events + self._emptied("door")
         if self.state in (STATE_RUNNING, STATE_FINISHING) and self._may_finish(t, door=True):
             events += self._finish(t, "door")
             self.door_opened = True
-            return events + self._emptied()
+            return events + self._emptied("door")
         return events  # opened in the middle of a programme (a forgotten cup): it goes on
 
     def switched_off(self, t: float) -> list[tuple[str, Any]]:
@@ -107,7 +107,7 @@ class Detector:
     def emptied(self, t: float) -> list[tuple[str, Any]]:
         events = self._advance(t)
         if self.state == STATE_FINISHED:
-            return events + self._emptied()
+            return events + self._emptied("button")
         return events
 
     def force_finish(self, t: float) -> list[tuple[str, Any]]:
@@ -291,7 +291,7 @@ class Detector:
                 return self._resume(t)
             if long_enough:
                 # A new programme: the last one was emptied without anyone telling.
-                events = self._emptied()
+                events = self._emptied("new")
                 self.cycle = new_cycle(b["t"])
                 self.cycle["wh"] = b["wh"]
                 self.cycle["last_active"] = b["last"]
@@ -301,7 +301,7 @@ class Detector:
                 self.after_bursts += 1
                 self._burst = None
         if t - self.finished_at >= FINISHED_KEEP_S:
-            return self._emptied()
+            return self._emptied("timeout")
         return []
 
     def _resume(self, t: float) -> list[tuple[str, Any]]:
@@ -321,10 +321,11 @@ class Detector:
         self.state = STATE_RUNNING
         return [("resumed", c)]
 
-    def _emptied(self) -> list[tuple[str, Any]]:
+    def _emptied(self, how: str) -> list[tuple[str, Any]]:
+        """how: "door", "button", "new" (a new programme started) or "timeout" (nobody said, for hours)."""
         self._low_blocked = self.w is not None and self.w > self.off_w
         self._reset()
-        return [("emptied", None)]
+        return [("emptied", how)]
 
     def _reset(self) -> None:
         self.state = STATE_OFF

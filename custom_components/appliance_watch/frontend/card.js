@@ -70,6 +70,9 @@ class ApplianceWatchCard extends HTMLElement {
       el.querySelector(".sub").innerHTML = x.sub;
       const bar = el.querySelector(".bar span");
       if (bar) bar.style.width = `${m.progress ?? 8}%`;
+      const va = el.querySelector(".ring .va"), rb = el.querySelector(".ring b"), left = minutesLeft(m.finish_time);
+      if (va) va.setAttribute("stroke-dashoffset", 169.6 * (1 - (m.progress || 0) / 100));
+      if (rb && left != null) rb.textContent = left >= 60 ? hm(left) : left;
       el.querySelectorAll(".aw-display").forEach((d) => (d.textContent = display(m)));
     }
   }
@@ -96,7 +99,11 @@ class ApplianceWatchCard extends HTMLElement {
     const active = m.state === "running" || m.state === "finishing";
     const { main, sub } = this._text(m, w, L);
     const bar = active ? `<div class="bar"><span style="width:${m.progress ?? 8}%"></span></div>` : "";
-    return `<div class="m s-${m.state}" style="--a:${ACCENT[m.kind] || ACCENT.other}" data-more="${m.entity_id}">
+    const left = minutesLeft(m.finish_time);
+    const ring = single && active && m.finish_time ? `<div class="ring"><svg viewBox="0 0 64 64"><circle class="tr" cx="32" cy="32" r="27"/>
+      <circle class="va" cx="32" cy="32" r="27" stroke-dasharray="169.6" stroke-dashoffset="${169.6 * (1 - (m.progress || 0) / 100)}"/></svg>
+      <b>${left >= 60 ? hm(left) : left}</b></div>` : "";
+    return `<div class="m s-${m.state}" style="--a:${m.state === "finished" ? "#22c55e" : ACCENT[m.kind] || ACCENT.other}" data-more="${m.entity_id}">${ring}
       <div class="art">${machineSVG(m.kind, m.state, { display: display(m), uid: m.entity_id.replace(/\W/g, "").slice(-10) })}</div>
       <div class="txt"><div class="name">${esc(m.name || w.kinds[m.kind])}</div>
         <div class="main">${main}</div><div class="sub">${sub}</div>${bar}
@@ -106,25 +113,41 @@ class ApplianceWatchCard extends HTMLElement {
 }
 
 const CSS = `
-  ha-card { padding:14px; overflow:hidden; }
-  .title { font-size:18px; font-weight:500; margin:0 2px 10px; }
-  .single .m { display:flex; align-items:center; gap:16px; }
-  .single .art { width:96px; height:117px; flex:none; }
-  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:12px; }
-  .tiles .m { display:flex; flex-direction:column; align-items:center; text-align:center; padding:10px 6px; border-radius:16px; }
-  .tiles .art { width:76px; height:93px; }
-  .m { cursor:pointer; position:relative; border-radius:16px; transition:background .4s; }
-  .m.s-running, .m.s-finishing { background:radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--a) 16%, transparent), transparent 70%); }
-  .m.s-finished { background:radial-gradient(120% 100% at 0% 0%, rgba(34,197,94,.16), transparent 70%); }
+  @property --ang { syntax:"<angle>"; initial-value:0deg; inherits:false; }
+  ha-card { padding:12px; overflow:hidden; }
+  .title { font-size:18px; font-weight:600; margin:2px 4px 10px; letter-spacing:-.01em; }
+  .m { cursor:pointer; position:relative; border-radius:22px; border:2px solid transparent; transition:background .4s; isolation:isolate; overflow:hidden; }
+  .m::before { content:""; position:absolute; inset:0; z-index:-1; opacity:0; transition:opacity .5s;
+    background:radial-gradient(130% 110% at 0% 0%, color-mix(in srgb, var(--a) 26%, transparent), transparent 65%); }
+  .m.s-running::before, .m.s-finishing::before, .m.s-finished::before { opacity:1; }
+  .m.s-running, .m.s-finishing { background:linear-gradient(var(--card-background-color, var(--ha-card-background, #fff)), var(--card-background-color, var(--ha-card-background, #fff))) padding-box,
+    conic-gradient(from var(--ang), var(--a), transparent 30%, transparent 70%, var(--a)) border-box; animation:orbit 3.5s linear infinite; }
+  @keyframes orbit { to { --ang:360deg; } }
+  .m.s-finished { border-color:#22c55e; animation:glow 2.4s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow:0 0 0 5px rgba(34,197,94,.14); } }
+  .single .m { display:flex; align-items:center; gap:14px; padding:10px 12px; }
+  .single .art { width:100px; height:122px; flex:none; filter:drop-shadow(0 10px 12px rgba(0,0,0,.18)); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(118px, 1fr)); gap:10px; }
+  .tiles .m { display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px 10px; }
+  .tiles .art { width:78px; height:95px; filter:drop-shadow(0 8px 10px rgba(0,0,0,.16)); }
   .txt { min-width:0; flex:1; width:100%; }
   .name { font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .main { font-size:18px; margin-top:2px; } .main b { font-weight:800; }
+  .main { font-size:20px; margin-top:2px; letter-spacing:-.01em; } .main b { font-weight:800; }
   .tiles .main { font-size:15px; }
   .sub { font-size:12px; color:var(--secondary-text-color); margin-top:2px; min-height:15px; }
-  .bar { height:6px; border-radius:4px; background:color-mix(in srgb, var(--a) 15%, transparent); margin-top:8px; overflow:hidden; }
-  .bar span { display:block; height:100%; border-radius:4px; background:var(--a); transition:width 1s; }
-  button { margin-top:8px; font:inherit; font-size:13px; border:0; border-radius:14px; padding:6px 12px; background:#22c55e; color:#fff; cursor:pointer; }
+  .bar { height:7px; border-radius:5px; background:color-mix(in srgb, var(--a) 15%, transparent); margin-top:8px; overflow:hidden; }
+  .bar span { display:block; height:100%; border-radius:5px; background:linear-gradient(90deg, color-mix(in srgb, var(--a) 60%, #fff), var(--a)); transition:width 1s; }
+  .single .bar { display:none; }
+  .ring { position:absolute; right:12px; top:50%; transform:translateY(-50%); width:64px; height:64px; }
+  .ring svg { width:100%; height:100%; transform:rotate(-90deg); } .ring circle { fill:none; stroke-width:6; }
+  .ring .tr { stroke:color-mix(in srgb, var(--a) 16%, transparent); }
+  .ring .va { stroke:var(--a); stroke-linecap:round; transition:stroke-dashoffset 1s; }
+  .ring b { position:absolute; inset:0; display:grid; place-items:center; font-size:17px; font-weight:800; }
+  .single .m:has(.ring) .txt { padding-right:70px; }
+  button { margin-top:8px; font:inherit; font-size:13px; font-weight:600; border:0; border-radius:14px; padding:7px 14px; background:#22c55e; color:#fff; cursor:pointer;
+    box-shadow:0 6px 14px -6px rgba(34,197,94,.7); }
   .none { color:var(--secondary-text-color); padding:12px; }
+  @media (prefers-reduced-motion: reduce) { .m { animation:none !important; } }
 `;
 
 class ApplianceWatchCardEditor extends HTMLElement {

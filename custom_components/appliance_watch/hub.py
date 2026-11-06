@@ -76,6 +76,9 @@ class Hub:
 
     async def async_setup(self) -> None:
         self.settings = {**DEFAULT_SETTINGS, **(await self._store.async_load() or {})}
+        from .speaker import Speaker
+
+        self.speaker = Speaker(self.hass, self)
         folder = Path(__file__).parent / "frontend"
         await self.hass.http.async_register_static_paths([StaticPathConfig(STATIC, str(folder), cache_headers=False)])
         stamp = await self.hass.async_add_executor_job(_stamp, folder)
@@ -95,6 +98,7 @@ class Hub:
         first = not self.machines
         self.machines[machine.entry.entry_id] = machine
         if first:
+            self.speaker.start()
             await panel_custom.async_register_panel(
                 self.hass,
                 frontend_url_path=PANEL,
@@ -109,6 +113,7 @@ class Hub:
         self.machines.pop(entry_id, None)
         if not self.machines:
             frontend.async_remove_panel(self.hass, PANEL)
+            self.speaker.stop()
         self.async_changed()
 
     @callback
@@ -283,6 +288,7 @@ class Hub:
             )
 
     async def async_unload(self) -> None:
+        self.speaker.stop()
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()

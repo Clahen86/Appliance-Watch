@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from functools import partial
 import logging
 import time
 from typing import TYPE_CHECKING, Any
@@ -19,6 +20,7 @@ from homeassistant.util import dt as dt_util
 from . import learning, prices
 from .const import (
     CONF_DOOR,
+    CONF_SPEAKER,
     CONF_ENERGY,
     CONF_KIND,
     CONF_POWER,
@@ -44,6 +46,7 @@ from .const import (
     STATE_RUNNING,
 )
 from .detector import Detector
+from .speaker import spoken_money, spoken_wait
 from .texts import ICONS, duration, money, t
 
 if TYPE_CHECKING:
@@ -69,6 +72,7 @@ class Machine:
         self.power: float | None = None
         self.cheap: dict[str, Any] | None = None
         self.notified_done: float | None = None
+        self.imported = False
         self._last_wh = 0.0
         self._saved = 0.0
         self._unsubs: list[Any] = []
@@ -126,6 +130,7 @@ class Machine:
         self.programs = data.get("programs", {})
         self.findings = data.get("findings", [])
         self.notified_done = data.get("notified_done")
+        self.imported = bool(data.get("imported"))
         self.detector.load(data.get("detector"), time.time())
         self.detector.finish_after_drying = bool(self.hub.settings.get(SET_FINISH_AFTER_DRY))
         self._last_wh = (self.detector.cycle or {}).get("wh", 0.0)
@@ -138,6 +143,63 @@ class Machine:
         if (state := self.hass.states.get(power)) is not None:
             self._handle(self.detector.sample(time.time(), _watts(state.state, state.attributes)))
         self._refresh()
+        if not self.imported:
+            # New machine: learn from the power readings Home Assistant already has, so it knows it from day one.
+            self.hass.async_create_background_task(self.async_learn_history(), f"{DOMAIN} learn {self.name}")
+
+    async def async_learn_history(self, days: int = 10) -> int:
+        """Find the cycles in the recorded power readings and learn from them. Returns how many were added."""
+        if "recorder" not in self.hass.config.components:
+            return 0
+        from homeassistant.components.recorder import get_instance, history
+
+        power = self.option(CONF_POWER)
+        start = dt_util.utcnow() - timedelta(days=days)
+        try:
+            found = await get_instance(self.hass).async_add_executor_job(
+                partial(history.state_changes_during_period, self.hass, start, None, power, True)
+            )
+        except Exception:  # noqa: BLE001 - no history: it learns as it goes
+            _LOGGER.debug("No history for %s", power, exc_info=True)
+            return 0
+        now_state = self.hass.states.get(power)
+        attrs = now_state.attributes if now_state else {}
+        d = Detector(self.profile, self.detector.standby)
+        cycles: list[dict[str, Any]] = []
+        last = None
+        for st in found.get(power, []):
+            ts = st.last_changed.timestamp()
+            if last is not None:
+                x = last + 30
+                while x < ts:
+                    cycles += [c for e, c in d.tick(x) if e == "finished"]
+                    x += 30
+            cycles += [c for e, c in d.sample(ts, _watts(st.state, attrs)) if e == "finished"]
+            last = ts
+        taken = [(c["start"], c.get("end") or c["start"]) for c in self.cycles]
+        if self.detector.cycle is not None:
+            taken.append((self.detector.cycle["start"], time.time()))
+        added = 0
+        for c in cycles:
+            c = dict(c)
+            if any(c["start"] < b + 60 and c["end"] > a - 60 for a, b in taken):
+                continue
+            c["clean"] = learning.is_clean(c, self.profile)
+            if not c["clean"]:
+                continue
+            pid, score = learning.classify(c, self.learned())
+            c.update(id=uuid.uuid4().hex[:12], at=dt_util.utc_from_timestamp(c["end"]).isoformat(), cost=None,
+                     program=pid or self._new_program(), score=score, by="history")
+            self.cycles.append(c)
+            added += 1
+        self.cycles.sort(key=lambda c: c["start"])
+        self.cycles = self.cycles[-CYCLES_KEPT:]
+        self.imported = True
+        self._update_quiet()
+        self._refresh()
+        await self._save()
+        _LOGGER.debug("%s: learned %s cycles from history", self.name, added)
+        return added
 
     async def async_stop(self) -> None:
         for unsub in self._unsubs:
@@ -154,7 +216,7 @@ class Machine:
         self._saved = time.time()
         await self.store.async_save({
             "cycles": self.cycles[-CYCLES_KEPT:], "programs": self.programs, "findings": self.findings,
-            "detector": self.detector.dump(), "notified_done": self.notified_done,
+            "detector": self.detector.dump(), "notified_done": self.notified_done, "imported": self.imported,
         })
 
     @callback
@@ -207,7 +269,7 @@ class Machine:
             elif kind == "resumed":
                 self._resumed(cycle)
             elif kind == "emptied":
-                self._emptied()
+                self._emptied(cycle)
             elif kind == "false_start":
                 self.live_program, self._last_wh = None, 0.0
 
@@ -254,6 +316,7 @@ class Machine:
         })
         self.notified_done = time.time()
         self.hass.async_create_task(self._notify_done(cycle), eager_start=False)
+        self.hass.async_create_task(self._say_done(cycle), eager_start=False)
         self._remind_later()
         self._schedule_save(True)
 
@@ -276,12 +339,16 @@ class Machine:
         self._update_quiet()
         self._schedule_save(True)
 
-    def _emptied(self) -> None:
+    def _emptied(self, how: str | None = None) -> None:
         if self._remind_cancel:
             self._remind_cancel()
             self._remind_cancel = None
         self.notified_done = None
         self.hass.bus.async_fire(EVENT_EMPTIED, {"entry_id": self.entry.entry_id, "name": self.name})
+        self.hub.speaker.morning.discard(self.entry.entry_id)
+        if how in ("door", "button"):  # someone did it - not when it's assumed after hours
+            self.hass.async_create_task(self.hub.speaker.async_say(
+                self, "emptied", t(self.hass, "say_emptied", name=self.name)), eager_start=False)
         self.hass.async_create_task(self.hub.async_clear(self), eager_start=False)
         self._schedule_save(True)
 
@@ -308,6 +375,7 @@ class Machine:
                 self.progress = round(min(99.0, 100 * elapsed / max(1.0, elapsed + left)), 1)
             else:
                 self.finish_time, self.progress = None, None
+            self._say_live(c, elapsed)
             problem = learning.fault(c, st, elapsed)
             if problem and not any(f.get("live") == c.get("id") for f in self.findings):
                 self._finding(problem, c, live=True)
@@ -505,6 +573,40 @@ class Machine:
             self, t(self.hass, "done_title", icon=ICONS.get(self.kind, ""), name=self.name), text, emptied=True
         )
 
+    async def _say_done(self, cycle: dict[str, Any]) -> None:
+        sp = self.hub.speaker
+        program = self.program_name(cycle.get("program")) if cycle.get("by") in ("user", "history") or \
+            (cycle.get("program") and self.programs.get(cycle["program"], {}).get("name")) else None
+        parts = []
+        if sp.wants("done"):
+            parts.append(t(self.hass, "say_done_program", name=self.name, program=program) if program
+                         else t(self.hass, "say_done", name=self.name))
+            if (cost := spoken_money(self.hass, cycle.get("cost"), self.currency)) is not None:
+                parts.append(t(self.hass, "say_cost", cost=cost))
+        if self.kind == KIND_WASHER and sp.wants("dryer") and any(m.kind == KIND_DRYER for m in self.hub.machines.values()):
+            if not parts:
+                parts.append(t(self.hass, "say_done", name=self.name))
+            parts.append(t(self.hass, "say_dryer"))
+        if parts:
+            await sp.async_say(self, "dryer" if not sp.wants("done") else "done", " ".join(parts))
+
+    def _say_live(self, c: dict[str, Any], elapsed: float) -> None:
+        """While it runs: "started, done at about 22:15" once, and "done in 10 minutes" once."""
+        sp = self.hub.speaker
+        if not c.get("said_start") and (self.finish_time is not None or elapsed >= 900):
+            c["said_start"] = True
+            if sp.wants("started"):
+                text = t(self.hass, "say_started_time", name=self.name,
+                         time=dt_util.as_local(self.finish_time).strftime("%H:%M")) if self.finish_time \
+                    else t(self.hass, "say_started", name=self.name)
+                self.hass.async_create_task(sp.async_say(self, "started", text), eager_start=False)
+        if self.finish_time is not None and not c.get("said_soon") and self.live_score >= learning.LIVE_SURE:
+            left = (self.finish_time - dt_util.utcnow()).total_seconds() / 60
+            if 3 <= left <= 10:
+                c["said_soon"] = True
+                self.hass.async_create_task(sp.async_say(
+                    self, "soon", t(self.hass, "say_soon", name=self.name, minutes=round(left))), eager_start=False)
+
     async def _notify_start(self) -> None:
         await self.hub.async_notify(self, t(self.hass, "start_title", icon=ICONS.get(self.kind, ""), name=self.name),
                                     self.program_name(self.live_program) or "")
@@ -524,6 +626,8 @@ class Machine:
                 self.hass.async_create_task(self.hub.async_notify(
                     self, t(self.hass, "remind_title", icon=ICONS.get(self.kind, ""), name=self.name),
                     t(self.hass, "remind", minutes=minutes), emptied=True), eager_start=False)
+                self.hass.async_create_task(self.hub.speaker.async_say(self, "remind", t(
+                    self.hass, "say_remind", name=self.name, waited=spoken_wait(self.hass, minutes))), eager_start=False)
 
         self._remind_cancel = async_call_later(self.hass, minutes * 60, remind)
 
@@ -549,7 +653,7 @@ class Machine:
                                 language, name=self.name, minutes=f.get("minutes", 0), percent=f.get("percent", 0))}
                 for f in self.findings
             ],
-            "devices": {k: self.option(k) for k in (CONF_POWER, CONF_ENERGY, CONF_DOOR, CONF_SWITCH)},
+            "devices": {k: self.option(k) for k in (CONF_POWER, CONF_ENERGY, CONF_DOOR, CONF_SWITCH, CONF_SPEAKER)},
         }
         if full:
             month = dt_util.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)

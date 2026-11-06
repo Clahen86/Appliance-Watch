@@ -22,6 +22,17 @@ const T = {
     title: "Appliances", settings: "Settings", back: "Back", menu: "Menu", saved: "Saved ✓", add: "Add machine",
     found: "Found in your home", addIt: "Add", running: "running", done: "done", ready: "All ready", month: "This month",
     cycles: "cycles", sinceStart: "so far", last: "Last", soon: "any minute", min: "min", now: "now",
+    learnHistory: "Learn from the last 10 days", learned_n: "Found {n} cycles in the history",
+    k: {
+      title: "Speakers", hint: "Says it out loud, so you don't need the phone. Music pauses and comes back.", which: "Speak on",
+      none: "No speakers that can announce", say: "What it says - tap to switch on or off",
+      kinds: { done: ["Done", "The dishwasher is done. It cost 2.10."], soon: ["Nearly done", "…is done in 10 minutes."],
+        remind: ["Not emptied", "…has been waiting an hour."], dryer: ["Move to the dryer", "Move the laundry to the dryer."],
+        emptied: ["Emptied", "Thank you! …is ready again."], started: ["Started", "…is done at about 22:15."] },
+      quiet: "Quiet at night", quietHint: "What finishes in the night is said in the morning instead.", from: "From", to: "To",
+      home: "Only when someone is home", homeHint: "Nobody talks to an empty house.", voice: "Voice", defaultVoice: "Standard",
+      test: "Try it", playing: "Playing…", noSpeaker: "Pick a speaker first", own: "Speaker for this machine", asDefault: "As chosen under ⚙️",
+    },
     isDone: "is done", isRunning: "is running", allReady: "All machines are ready", readySub: "Start one - it's watched from the first minute.",
     more: "More", close: "Close",
     which: "Which programme was it?", whichNow: "Which programme is running?", own: "Your own name…",
@@ -43,6 +54,17 @@ const T = {
     title: "Maskiner", settings: "Indstillinger", back: "Tilbage", menu: "Menu", saved: "Gemt ✓", add: "Tilføj maskine",
     found: "Fundet i dit hjem", addIt: "Tilføj", running: "kører", done: "færdig", ready: "Alle er klar", month: "Denne måned",
     cycles: "vaske", sinceStart: "indtil nu", last: "Sidst", soon: "om lidt", min: "min", now: "nu",
+    learnHistory: "Lær fra de sidste 10 dage", learned_n: "Fandt {n} vaske i historikken",
+    k: {
+      title: "Højttalere", hint: "Den siger det højt, så du ikke behøver telefonen. Musikken holder pause og kommer igen.", which: "Tal i",
+      none: "Ingen højttalere der kan annoncere", say: "Det den siger - tryk for at slå til og fra",
+      kinds: { done: ["Færdig", "Opvaskeren er færdig. Det kostede 2,10 kr."], soon: ["Snart færdig", "…er færdig om 10 minutter."],
+        remind: ["Ikke tømt", "…har ventet i en time."], dryer: ["Flyt til tørretumbler", "Flyt tøjet over i tørretumbleren."],
+        emptied: ["Tømt", "Tak! …er klar igen."], started: ["Startet", "…er færdig cirka 22:15."] },
+      quiet: "Stille om natten", quietHint: "Det der bliver færdigt om natten, siges om morgenen i stedet.", from: "Fra", to: "Til",
+      home: "Kun når nogen er hjemme", homeHint: "Ingen grund til at tale til et tomt hus.", voice: "Stemme", defaultVoice: "Standard",
+      test: "Prøv", playing: "Afspiller…", noSpeaker: "Vælg en højttaler først", own: "Højttaler til denne maskine", asDefault: "Som valgt under ⚙️",
+    },
     isDone: "er færdig", isRunning: "kører", allReady: "Alle maskiner er klar", readySub: "Start en - den bliver fulgt fra første minut.",
     more: "Mere", close: "Luk",
     which: "Hvilket program var det?", whichNow: "Hvilket program kører den?", own: "Eget navn…",
@@ -330,6 +352,9 @@ class ApplianceWatchPanel extends HTMLElement {
       <label>${t.door}<select data-ms="door_sensor">${opts((s) => s.entity_id.startsWith("binary_sensor.") && ["door", "opening", "window"].includes(s.attributes.device_class), d.door_sensor)}</select></label>
       <label>${t.energy}<select data-ms="energy_sensor">${opts((s) => s.entity_id.startsWith("sensor.") && s.attributes.device_class === "energy", d.energy_sensor)}</select></label>
       <label>${t.switch}<select data-ms="switch">${opts((s) => s.entity_id.startsWith("switch."), d.switch)}</select></label>
+      <label>🔊 ${t.k.own}<select data-ms="speaker"><option value="">${t.k.asDefault}</option>${states.filter((s) => s.entity_id.startsWith("media_player.") && (s.attributes.supported_features & 512))
+        .map((s) => `<option value="${s.entity_id}" ${s.entity_id === d.speaker ? "selected" : ""}>${esc(s.attributes.friendly_name || s.entity_id)}</option>`).join("")}</select></label>
+      <button class="wide soft" data-act="learn">🧠 ${t.learnHistory}</button>
     </section>`;
   }
 
@@ -428,6 +453,7 @@ class ApplianceWatchPanel extends HTMLElement {
         ${toggle("only_home", t.s.onlyHome, t.s.onlyHomeHint)}${toggle("notify_start", t.s.start)}
         <div class="lbl">${t.s.remind}</div>${seg("remind_minutes", [[0, t.s.off], [30, "30 min"], [60, dur(3600, this.L)], [120, dur(7200, this.L)]])}
       </section>
+      ${this._speakSection(s, v, toggle)}
       <section class="card"><h3>⚡ ${t.s.price}</h3><div class="muted">${t.s.priceHint}</div>
         <select data-set="price_sensor"><option value="">${t.s.off}</option>${s.price_sensors.map((p) => `<option value="${p.entity_id}" ${p.entity_id === v.price_sensor ? "selected" : ""}>${p.forecast ? "📈 " : ""}${esc(p.name)}</option>`).join("")}</select>
         <div class="lbl">${t.s.cheap}</div>${seg("cheap_saving", [[0.5, money(0.5, "kr")], [1, money(1, "kr")], [2, money(2, "kr")], [5, money(5, "kr")]])}
@@ -437,6 +463,24 @@ class ApplianceWatchPanel extends HTMLElement {
       </section>
       <section class="card tight">${toggle("finish_after_drying", t.s.dry, t.s.dryHint)}</section>
     </main>`;
+  }
+
+  _speakSection(s, v, toggle) {
+    const t = this.t, k = t.k, say = v.say || {};
+    const tiles = [["done", "✅"], ["soon", "⏳"], ["remind", "🔔"], ["dryer", "🌀"], ["emptied", "🙏"], ["started", "▶️"]];
+    return `<section class="card speak"><h3>🔊 ${k.title}</h3><div class="muted">${k.hint}</div>
+      <div class="lbl">${k.which}</div>
+      <div class="chips pick">${(s.speakers || []).map((p) => `<button class="chip btn ${v.speakers.includes(p.entity_id) ? "on" : ""}" data-act="speaker" data-id="${p.entity_id}">📢 ${esc(p.name)}</button>`).join("") || `<span class="muted">${k.none}</span>`}</div>
+      <div class="lbl">${k.say}</div>
+      <div class="saygrid">${tiles.map(([key, icon]) => `<button class="say ${say[key] ? "on" : ""}" data-act="say" data-key="${key}">
+        <span class="si">${icon}</span><span class="st">${k.kinds[key][0]}</span><span class="sx">“${k.kinds[key][1]}”</span><span class="sw"><span></span></span></button>`).join("")}</div>
+      ${toggle("quiet", k.quiet, k.quietHint)}
+      ${v.quiet ? `<div class="times"><label>${k.from}<input type="time" data-time="quiet_from" value="${esc(v.quiet_from || "22:00")}"></label>
+        <span class="arrow">→</span><label>${k.to}<input type="time" data-time="quiet_to" value="${esc(v.quiet_to || "07:00")}"></label></div>` : ""}
+      ${toggle("say_only_home", k.home, k.homeHint)}
+      ${(s.voices || []).length > 1 ? `<div class="lbl">${k.voice}</div><select data-set="tts"><option value="">${k.defaultVoice}</option>${s.voices.map((x) => `<option value="${x.entity_id}" ${x.entity_id === v.tts ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : ""}
+      <button class="wide soft" data-act="speaktest">▶ ${k.test}</button>
+    </section>`;
   }
 
   async _save(changes) {
@@ -461,6 +505,7 @@ class ApplianceWatchPanel extends HTMLElement {
     }));
     r.querySelectorAll("[data-act]").forEach((el) => el.addEventListener("click", (e) => { e.stopPropagation(); this._act(el.dataset.act, el); }));
     r.querySelectorAll("[data-set]").forEach((el) => el.addEventListener("change", () => this._save({ [el.dataset.set]: el.value || null })));
+    r.querySelectorAll("[data-time]").forEach((el) => el.addEventListener("change", () => el.value && this._save({ [el.dataset.time]: el.value })));
     r.querySelectorAll("[data-merge]").forEach((el) => el.addEventListener("change", () => el.value && this._cmd("merge_program", { program: el.dataset.merge, into: el.value })));
     r.querySelectorAll("[data-relabel]").forEach((el) => el.addEventListener("change", () => el.value && this._cmd("label", { cycle_id: el.dataset.relabel, program: el.value })));
     r.querySelectorAll("[data-ms]").forEach((el) => el.addEventListener("change", () => this._cmd("machine_settings", { [el.dataset.ms]: el.value || null }, true)));
@@ -499,6 +544,32 @@ class ApplianceWatchPanel extends HTMLElement {
       case "finish": return this._cmd("finish", {});
       case "dismiss": return this._cmd("dismiss", { index: Number(el.dataset.i) });
       case "label": return this._cmd("label", { cycle_id: el.dataset.cycle, program: el.dataset.program });
+      case "speaker": {
+        const id = el.dataset.id, list = new Set(this._settings.settings.speakers || []);
+        list.has(id) ? list.delete(id) : list.add(id);
+        el.classList.toggle("on");
+        return this._save({ speakers: [...list] });
+      }
+      case "say": {
+        const say = { ...(this._settings.settings.say || {}) };
+        say[el.dataset.key] = !say[el.dataset.key];
+        el.classList.toggle("on", say[el.dataset.key]);
+        return this._save({ say });
+      }
+      case "speaktest": {
+        el.disabled = true;
+        const res = await this._ws({ type: "appliance_watch/speak_test" }).catch(() => ({ said: false }));
+        el.disabled = false;
+        return this._toast(res.said ? `🔊 ${this.t.k.playing}` : this.t.k.noSpeaker, !res.said);
+      }
+      case "learn": {
+        el.disabled = true;
+        el.textContent = "🧠 …";
+        const res = await this._ws({ type: "appliance_watch/learn_history", entry_id: this._open });
+        this._full[this._open] = res;
+        this._render();
+        return this._toast(this.t.learned_n.replace("{n}", res.learned));
+      }
       case "sheet": return this._openSheet(el.dataset.kind, el.dataset.id);
       case "closesheet": return this._closeSheet();
       case "merge": return this._cmd("merge_program", { program: el.dataset.program, into: el.dataset.into });
@@ -545,7 +616,9 @@ class ApplianceWatchPanel extends HTMLElement {
       case "toggle": {
         const key = el.dataset.key, val = !this._settings.settings[key];
         el.classList.toggle("on", val);
-        return this._save({ [key]: val });
+        await this._save({ [key]: val });
+        if (key === "quiet") this._render();
+        return;
       }
       case "set": {
         el.parentElement.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === el));
@@ -664,6 +737,23 @@ class ApplianceWatchPanel extends HTMLElement {
       .toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%, 80px); background:#323232; color:#fff; padding:10px 18px;
         border-radius:12px; font-size:14px; opacity:0; transition:.25s; z-index:9; max-width:90vw; }
       .toast.show { transform:translate(-50%, 0); opacity:1; } .toast.bad { background:#e5484d; }
+
+      /* ---------- speakers ---------- */
+      .saygrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+      button.say { position:relative; text-align:left; font:inherit; color:inherit; cursor:pointer; border-radius:18px; padding:14px 14px 40px;
+        border:2px solid var(--divider-color); background:var(--card-background-color); display:flex; flex-direction:column; gap:4px; transition:.2s; }
+      button.say .si { font-size:24px; } button.say .st { font-weight:700; font-size:15px; }
+      button.say .sx { font-size:12px; color:var(--secondary-text-color); line-height:1.35; }
+      button.say .sw { position:absolute; left:14px; bottom:12px; width:36px; height:20px; border-radius:10px; background:var(--disabled-color, #bbb); transition:.2s; }
+      button.say .sw span { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.2s; }
+      button.say.on { border-color:var(--primary-color); background:color-mix(in srgb, var(--primary-color) 9%, var(--card-background-color));
+        box-shadow:0 8px 20px -12px var(--primary-color); }
+      button.say.on .sw { background:var(--primary-color); } button.say.on .sw span { left:18px; }
+      .times { display:flex; align-items:flex-end; gap:12px; margin-top:10px; }
+      .times label { flex:1; margin:0; } .times input { font-size:22px; font-weight:700; text-align:center; padding:12px; }
+      .times .arrow { font-size:22px; color:var(--secondary-text-color); padding-bottom:14px; }
+      .speak { background:linear-gradient(var(--card-background-color), var(--card-background-color)) padding-box,
+        linear-gradient(135deg, #6366f1, #ec4899) border-box; border:2px solid transparent; }
 
       /* ---------- the WOW layer ---------- */
       @property --ang { syntax:"<angle>"; initial-value:0deg; inherits:false; }

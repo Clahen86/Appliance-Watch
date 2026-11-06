@@ -16,6 +16,7 @@ CONF_ENERGY = "energy_sensor"
 CONF_DOOR = "door_sensor"
 CONF_SWITCH = "switch"
 CONF_KIND = "kind"
+CONF_SPEAKER = "speaker"
 
 # Global settings (panel ⚙️), kept in the integration's own store.
 SET_NOTIFY = "notify"
@@ -26,6 +27,14 @@ SET_AI = "ai_task"
 SET_CHEAP = "cheap_saving"
 SET_NOTIFY_START = "notify_start"
 SET_FINISH_AFTER_DRY = "finish_after_drying"
+SET_SPEAKERS = "speakers"
+SET_TTS = "tts"
+SET_SAY = "say"
+SET_SAY_HOME = "say_only_home"
+SET_QUIET = "quiet"
+SET_QUIET_FROM = "quiet_from"
+SET_QUIET_TO = "quiet_to"
+SAY_KINDS = ["done", "soon", "remind", "dryer", "emptied", "started"]
 DEFAULT_SETTINGS = {
     SET_NOTIFY: [],
     SET_ONLY_HOME: True,
@@ -35,6 +44,13 @@ DEFAULT_SETTINGS = {
     SET_CHEAP: 1.0,
     SET_NOTIFY_START: False,
     SET_FINISH_AFTER_DRY: False,
+    SET_SPEAKERS: [],
+    SET_TTS: None,
+    SET_SAY: {"done": True, "soon": True, "remind": True, "dryer": True, "emptied": False, "started": False},
+    SET_SAY_HOME: True,
+    SET_QUIET: True,
+    SET_QUIET_FROM: "22:00",
+    SET_QUIET_TO: "07:00",
 }
 
 KIND_DISHWASHER = "dishwasher"

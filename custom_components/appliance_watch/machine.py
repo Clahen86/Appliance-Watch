@@ -401,6 +401,12 @@ class Machine:
         self.programs[pid]["name"] = name.strip()
         return pid
 
+    async def async_add_program(self, name: str) -> None:
+        if name.strip():
+            self.program_by_name(name)
+            self._refresh()
+            await self._save()
+
     async def async_label(self, cycle_id: str, name: str | None = None, program: str | None = None) -> None:
         """The user says which programme a cycle was (also the running one): always learned from."""
         pid = program if program in self.programs else self.program_by_name(name) if name else None

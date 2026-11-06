@@ -166,7 +166,9 @@ async def test_panel_commands(hass: HomeAssistant, hass_ws_client) -> None:
     await ws.send_json({"id": 7, "type": f"{DOMAIN}/save_settings", "remind_minutes": 30})
     assert (await ws.receive_json())["success"]
     assert hass.data[DOMAIN].settings["remind_minutes"] == 30
-    await ws.send_json({"id": 8, "type": f"{DOMAIN}/subscribe"})
+    await ws.send_json({"id": 10, "type": f"{DOMAIN}/add_program", "entry_id": entry.entry_id, "name": "Skyl"})
+    assert "Skyl" in [p["name"] for p in (await ws.receive_json())["result"]["programs"]]
+    await ws.send_json({"id": 11, "type": f"{DOMAIN}/subscribe"})
     assert (await ws.receive_json())["success"]
     event = await ws.receive_json()
     assert event["event"]["machines"][0]["name"] == "Opvaskemaskine"

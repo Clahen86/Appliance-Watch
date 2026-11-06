@@ -38,7 +38,7 @@ _SKIP_NOTIFY = {"notify", "send_message"}
 
 @callback
 def async_setup(hass: HomeAssistant) -> None:
-    for command in (ws_machines, ws_subscribe, ws_machine, ws_label, ws_rename, ws_merge, ws_forget, ws_delete_cycle,
+    for command in (ws_machines, ws_subscribe, ws_machine, ws_label, ws_add_program, ws_rename, ws_merge, ws_forget, ws_delete_cycle,
                     ws_emptied, ws_finish, ws_dismiss, ws_settings, ws_save_settings, ws_machine_settings,
                     ws_ai_name, ws_ai_explain):
         websocket_api.async_register_command(hass, command)
@@ -128,6 +128,10 @@ async def _label(hass, m: Machine, msg):
     await m.async_label(msg["cycle_id"], name=msg.get("name"), program=msg.get("program"))
 
 
+async def _add_program(hass, m: Machine, msg):
+    await m.async_add_program(msg["name"])
+
+
 async def _rename(hass, m: Machine, msg):
     await m.async_rename(msg["program"], msg["name"])
 
@@ -186,6 +190,7 @@ async def _ai_explain(hass, m: Machine, msg):
 
 
 ws_label = _simple("label", {vol.Required("cycle_id"): str, vol.Optional("name"): str, vol.Optional("program"): str}, _label)
+ws_add_program = _simple("add_program", {vol.Required("name"): str}, _add_program)
 ws_rename = _simple("rename_program", {vol.Required("program"): str, vol.Required("name"): str}, _rename)
 ws_merge = _simple("merge_program", {vol.Required("program"): str, vol.Required("into"): str}, _merge)
 ws_forget = _simple("forget_program", {vol.Required("program"): str}, _forget)

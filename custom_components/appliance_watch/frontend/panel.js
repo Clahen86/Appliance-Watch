@@ -1,12 +1,29 @@
 // Appliance Watch panel: every machine as itself, live; history, programmes, settings.
 import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, machineSVG, minutesLeft, money, num } from "./machines.js";
 
+// Programme names to pick from, per machine - only the ones that fit it.
+const SUGGEST = {
+  da: {
+    dishwasher: ["Øko 50°", "Auto 45-65°", "Intensiv 70°", "Hurtig 45°", "Skyl", "Glas 40°", "Maskinpleje"],
+    washer: ["Bomuld 40°", "Bomuld 60°", "Øko 40-60", "Kulørt 30°", "Hurtigvask 30°", "Syntetisk 40°", "Uld", "Sengetøj 60°", "Skyl og centrifugering"],
+    dryer: ["Skabstørt", "Ekstra tørt", "Strygetørt", "Syntetisk", "Uld", "Opfriskning", "Tidsprogram"],
+    other: [],
+  },
+  en: {
+    dishwasher: ["Eco 50°", "Auto 45-65°", "Intensive 70°", "Quick 45°", "Pre-rinse", "Glass 40°", "Machine care"],
+    washer: ["Cotton 40°", "Cotton 60°", "Eco 40-60", "Colours 30°", "Quick 30°", "Synthetics 40°", "Wool", "Bedding 60°", "Rinse and spin"],
+    dryer: ["Cupboard dry", "Extra dry", "Iron dry", "Synthetics", "Wool", "Refresh", "Timed"],
+    other: [],
+  },
+};
+
 const T = {
   en: {
     title: "Appliances", settings: "Settings", back: "Back", menu: "Menu", saved: "Saved ✓", add: "Add machine",
     found: "Found in your home", addIt: "Add", running: "running", done: "done", ready: "All ready", month: "This month",
     cycles: "cycles", sinceStart: "so far", last: "Last", soon: "any minute", min: "min", now: "now",
-    which: "Which programme was it?", whichHint: "Tell it once - next time it knows by itself.", other: "Other…", name: "Name",
+    which: "Which programme was it?", whichNow: "Which programme is running?", own: "Your own name…",
+    newProgram: "New programme, e.g. Pre-rinse", addProgram: "Add", noPrograms: "No programmes yet.", whichHint: "Tell it once - next time it knows by itself.", other: "Other…", name: "Name",
     ok: "OK", ai: "✨ Suggest", aiExplain: "✨ Explain", programs: "Programmes", history: "History", noHistory: "No cycles yet - start the machine.",
     usual: "usually", rename: "Rename", merge: "Merge into…", forget: "Forget", del: "Delete", changeProgram: "Change programme",
     learned: "learned from", unclear: "Not learned from", reasons: { power_lost: "power reading lost", timeout: "ran too long", forced: "ended by hand", switch: "switched off" },
@@ -24,7 +41,8 @@ const T = {
     title: "Maskiner", settings: "Indstillinger", back: "Tilbage", menu: "Menu", saved: "Gemt ✓", add: "Tilføj maskine",
     found: "Fundet i dit hjem", addIt: "Tilføj", running: "kører", done: "færdig", ready: "Alle er klar", month: "Denne måned",
     cycles: "vaske", sinceStart: "indtil nu", last: "Sidst", soon: "om lidt", min: "min", now: "nu",
-    which: "Hvilket program var det?", whichHint: "Sig det én gang - næste gang ved den det selv.", other: "Andet…", name: "Navn",
+    which: "Hvilket program var det?", whichNow: "Hvilket program kører den?", own: "Eget navn…",
+    newProgram: "Nyt program, fx Skyl", addProgram: "Tilføj", noPrograms: "Ingen programmer endnu.", whichHint: "Sig det én gang - næste gang ved den det selv.", other: "Andet…", name: "Navn",
     ok: "OK", ai: "✨ Foreslå", aiExplain: "✨ Forklar", programs: "Programmer", history: "Historik", noHistory: "Ingen vaske endnu - start maskinen.",
     usual: "normalt", rename: "Omdøb", merge: "Slå sammen med…", forget: "Glem", del: "Slet", changeProgram: "Skift program",
     learned: "lært af", unclear: "Ikke lært af", reasons: { power_lost: "mistede strømmålingen", timeout: "kørte for længe", forced: "afsluttet i hånden", switch: "slukket" },
@@ -122,8 +140,19 @@ class ApplianceWatchPanel extends HTMLElement {
   // ---------- drawing ----------
 
   _render() {
+    const r = this.shadowRoot;
+    // Keep what the user has open or is typing when the page is drawn again.
+    const open = new Set([...r.querySelectorAll("details[open][data-key]")].map((d) => d.dataset.key));
+    const typed = Object.fromEntries([...r.querySelectorAll("input[data-keep]")].filter((i) => i.value).map((i) => [i.dataset.keep, i.value]));
+    const focus = r.activeElement?.dataset?.keep;
+    const y = window.scrollY;
     const v = this._view === "settings" ? this._settingsView() : this._view === "machine" ? this._machineView() : this._listView();
-    this.shadowRoot.innerHTML = `${this._css()}<style>${MACHINE_CSS}</style>${v}<div class="toast"></div>`;
+    r.innerHTML = `${this._css()}<style>${MACHINE_CSS}</style>${v}<div class="toast"></div>`;
+    r.querySelectorAll("details[data-key]").forEach((d) => open.has(d.dataset.key) && (d.open = true));
+    r.querySelectorAll("input[data-keep]").forEach((i) => i.dataset.keep in typed && (i.value = typed[i.dataset.keep]));
+    if (focus) r.querySelector(`input[data-keep="${focus}"]`)?.focus();
+    if (this._view === this._lastView) window.scrollTo(0, y);
+    this._lastView = this._view;
     this._wire();
   }
 
@@ -212,7 +241,7 @@ class ApplianceWatchPanel extends HTMLElement {
       </div></div>`;
     if (!f) return `${this._bar(esc(m.name), true)}<main>${head}<div class="empty">…</div></main>`;
     const live = active && f.live_curve?.length > 2 ? `<section class="card"><h3>${t.live}</h3>${this._chart(f.live_curve.map((x) => x * 60), m.kind, 90)}</section>` : "";
-    const ask = this._ask(f);
+    const ask = this._ask(f, m);
     const findings = (f.findings || []).length ? `<section class="card warnbox"><h3>⚠️ ${t.findings}</h3>${f.findings.map((x, i) =>
       `<div class="row"><span>${esc(x.text)}</span>${x.cycle && this._hasAi ? `<button class="ghost sm" data-act="explain" data-cycle="${x.cycle}">${t.aiExplain}</button>` : ""}
        <button class="ghost sm" data-act="dismiss" data-i="${i}">${t.dismiss}</button></div><div class="explain" data-for="${x.cycle}"></div>`).join("")}</section>` : "";
@@ -222,32 +251,38 @@ class ApplianceWatchPanel extends HTMLElement {
       ${this._programs(f, m)}${this._history(f, m)}${this._admin ? this._machineSettings(m) : ""}</main>`;
   }
 
-  _ask(f) {
-    const t = this.t, last = f.history?.[0];
-    if (!last || last.by === "user" || f.state === "running") return "";
+  _ask(f, m) {
+    const t = this.t, active = m.state === "running" || m.state === "finishing";
+    // While it runs: which programme is running (it knows the rest sooner). After: which one it was.
+    const c = active ? (f.live_id && (m.program_id == null || m.score < 1) ? { id: f.live_id, program_id: m.program_id } : null)
+      : f.history?.[0] && f.history[0].by !== "user" ? f.history[0] : null;
+    if (!c) return "";
     const named = f.programs.filter((p) => p.named);
-    return `<section class="card ask"><h3>🏷️ ${t.which}</h3><div class="muted">${t.whichHint} (${new Date(last.start).toLocaleString(this.L === "da" ? "da-DK" : undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })}, ${Math.round(last.duration / 60)} ${t.min})</div>
-      <div class="chips pick">${named.map((p) => `<button class="chip btn ${p.id === last.program_id ? "on" : ""}" data-act="label" data-cycle="${last.id}" data-program="${p.id}">${esc(p.name)}</button>`).join("")}</div>
-      <div class="inline"><input id="newname" placeholder="${this.L === "da" ? "fx Øko 50°" : "e.g. Eco 50°"}" list="names"><button class="primary" data-act="labelnew" data-cycle="${last.id}">${t.ok}</button>
-      ${this._hasAi && last.program_id ? `<button class="ghost" data-act="ainame" data-program="${last.program_id}">${t.ai}</button>` : ""}</div>
-      <datalist id="names">${(this.L === "da" ? ["Øko 50°", "Auto 45-65°", "Intensiv 70°", "Hurtig 45°", "Bomuld 40°", "Bomuld 60°", "Kulørt 30°", "Hurtigvask 30°", "Uld", "Skabstørt", "Strygetørt"] : ["Eco 50°", "Auto", "Intensive 70°", "Quick 45°", "Cotton 40°", "Cotton 60°", "Colours 30°", "Quick 30°", "Wool", "Cupboard dry", "Iron dry"]).map((n) => `<option value="${n}">`).join("")}</datalist>
+    const have = new Set(named.map((p) => p.name.toLowerCase()));
+    const ideas = (SUGGEST[this.L][m.kind] || []).filter((n) => !have.has(n.toLowerCase()));
+    const when = active ? "" : ` (${new Date(c.start).toLocaleString(this.L === "da" ? "da-DK" : undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })}, ${dur(c.duration, this.L)})`;
+    return `<section class="card ask"><h3>🏷️ ${active ? t.whichNow : t.which}</h3><div class="muted">${t.whichHint}${when}</div>
+      <div class="chips pick">${named.map((p) => `<button class="chip btn ${p.id === c.program_id ? "on" : ""}" data-act="label" data-cycle="${c.id}" data-program="${p.id}">${esc(p.name)}</button>`).join("")}
+        ${ideas.map((n) => `<button class="chip btn idea" data-act="labelname" data-cycle="${c.id}" data-name="${esc(n)}">${esc(n)}</button>`).join("")}</div>
+      <div class="inline"><input id="newname" data-keep="newname" placeholder="${t.own}"><button class="primary" data-act="labelnew" data-cycle="${c.id}">${t.ok}</button>
+      ${this._hasAi && c.program_id && !active ? `<button class="ghost" data-act="ainame" data-program="${c.program_id}">${t.ai}</button>` : ""}</div>
     </section>`;
   }
 
   _programs(f, m) {
     const t = this.t;
-    if (!f.programs?.length) return "";
+    const add = `<div class="inline"><input id="addprog" data-keep="addprog" placeholder="${t.newProgram}"><button class="ghost" data-act="addprog">+ ${t.addProgram}</button></div>`;
     return `<section class="card"><h3>${t.programs}</h3>${f.programs.map((p) => {
       const st = p.stats;
       const usual = st ? `${t.usual} ${dur(st.duration, this.L)} · ${num(st.wh / 1000, this.L)} kWh${st.cost != null ? " · " + money(st.cost, m.currency) : ""}` : "";
       return `<div class="prog-row"><div class="pname"><b>${esc(p.name)}</b>${p.named ? "" : ` <span class="auto">auto</span>`}
         <div class="muted">${usual}${usual ? " · " : ""}${t.learned} ${st ? st.count : 0}/${p.count}</div></div>
-        <details class="menu"><summary>⋯</summary><div class="pop">
-          <div class="inline"><input data-rename="${p.id}" value="${esc(p.named ? p.name : "")}" placeholder="${t.rename}"><button class="primary sm" data-act="rename" data-program="${p.id}">${t.ok}</button></div>
+        <details class="menu" data-key="prog-${p.id}"><summary>⋯</summary><div class="pop">
+          <div class="inline"><input data-rename="${p.id}" data-keep="rename-${p.id}" value="${esc(p.named ? p.name : "")}" placeholder="${t.rename}"><button class="primary sm" data-act="rename" data-program="${p.id}">${t.ok}</button></div>
           ${this._hasAi ? `<button class="ghost sm" data-act="ainame" data-program="${p.id}">${t.ai}</button>` : ""}
           ${f.programs.length > 1 ? `<select data-merge="${p.id}"><option value="">${t.merge}</option>${f.programs.filter((o) => o.id !== p.id).map((o) => `<option value="${o.id}">${esc(o.name)}</option>`).join("")}</select>` : ""}
           <button class="ghost sm danger" data-act="forget" data-program="${p.id}">${t.forget}</button></div></details></div>`;
-    }).join("")}</section>`;
+    }).join("") || `<div class="muted">${t.noPrograms}</div>`}${add}</section>`;
   }
 
   _history(f, m) {
@@ -257,7 +292,7 @@ class ApplianceWatchPanel extends HTMLElement {
       const flags = [c.resumed ? `<span class="tag">⏸ ${t.resumed}</span>` : "", c.clean === false ? `<span class="tag grey">${t.unclear}: ${t.reasons[c.reason] || c.reason}</span>` : ""].join("");
       return `<div class="hist"><div class="spark">${this._chart(c.curve, m.kind, 28, true)}</div>
         <div class="hmain"><b>${esc(c.program || "–")}</b> <span class="muted">${when}</span><div class="muted">${dur(c.duration, this.L)} · ${num(c.kwh, this.L)} kWh${c.cost != null ? " · " + money(c.cost, m.currency) : ""} ${flags}</div></div>
-        <details class="menu"><summary>⋯</summary><div class="pop">
+        <details class="menu" data-key="hist-${c.id}"><summary>⋯</summary><div class="pop">
           <select data-relabel="${c.id}"><option value="">${t.changeProgram}</option>${f.programs.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>
           ${this._hasAi ? `<button class="ghost sm" data-act="explain" data-cycle="${c.id}">${t.aiExplain}</button>` : ""}
           <button class="ghost sm danger" data-act="delcycle" data-cycle="${c.id}">${t.del}</button></div></details></div><div class="explain" data-for="${c.id}"></div>`;
@@ -359,8 +394,8 @@ class ApplianceWatchPanel extends HTMLElement {
     r.querySelectorAll("[data-merge]").forEach((el) => el.addEventListener("change", () => el.value && this._cmd("merge_program", { program: el.dataset.merge, into: el.value })));
     r.querySelectorAll("[data-relabel]").forEach((el) => el.addEventListener("change", () => el.value && this._cmd("label", { cycle_id: el.dataset.relabel, program: el.value })));
     r.querySelectorAll("[data-ms]").forEach((el) => el.addEventListener("change", () => this._cmd("machine_settings", { [el.dataset.ms]: el.value || null }, true)));
-    const input = r.getElementById("newname");
-    input?.addEventListener("keydown", (e) => e.key === "Enter" && r.querySelector('[data-act="labelnew"]').click());
+    r.getElementById("newname")?.addEventListener("keydown", (e) => e.key === "Enter" && r.querySelector('[data-act="labelnew"]').click());
+    r.getElementById("addprog")?.addEventListener("keydown", (e) => e.key === "Enter" && r.querySelector('[data-act="addprog"]').click());
   }
 
   async _cmd(type, data, reload = false) {
@@ -394,6 +429,12 @@ class ApplianceWatchPanel extends HTMLElement {
       case "finish": return this._cmd("finish", {});
       case "dismiss": return this._cmd("dismiss", { index: Number(el.dataset.i) });
       case "label": return this._cmd("label", { cycle_id: el.dataset.cycle, program: el.dataset.program });
+      case "labelname": return this._cmd("label", { cycle_id: el.dataset.cycle, name: el.dataset.name });
+      case "addprog": {
+        const name = r.getElementById("addprog").value.trim();
+        if (name) r.getElementById("addprog").value = "";
+        return name && this._cmd("add_program", { name });
+      }
       case "labelnew": {
         const name = r.getElementById("newname").value.trim();
         return name && this._cmd("label", { cycle_id: el.dataset.cycle, name });
@@ -495,6 +536,7 @@ class ApplianceWatchPanel extends HTMLElement {
       .chip.cheap { background:color-mix(in srgb, #eab308 20%, transparent); }
       .chip.warn { background:color-mix(in srgb, #f59e0b 22%, transparent); }
       .chip.btn { cursor:pointer; font-size:14px; padding:7px 14px; border-radius:16px; border:1px solid var(--divider-color); background:transparent; }
+      .chip.btn.idea { border-style:dashed; color:var(--secondary-text-color); }
       .chip.btn.on { background:var(--primary-color); color:var(--text-primary-color, #fff); border-color:var(--primary-color); }
       button.primary, button.ghost { font:inherit; font-size:14px; border-radius:18px; padding:8px 16px; cursor:pointer; border:1px solid var(--primary-color); }
       button.primary { background:var(--primary-color); color:var(--text-primary-color, #fff); }

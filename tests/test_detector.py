@@ -46,7 +46,7 @@ def local(ts: float) -> str:
 def test_dishwasher_done_when_it_is_done():
     finished, events = run("dishwasher")
     assert [local(c["start"]) for _, c in finished] == [
-        "11-03 13:43", "11-03 17:51", "11-04 13:48", "11-04 21:49", "11-05 13:59", "11-06 10:18"]
+        "11-03 13:39", "11-03 17:51", "11-04 13:44", "11-04 21:49", "11-05 13:55", "11-06 10:14"]
     # Today: the work ended 11:08 and it dried at 5-15 W until 11:26. Done within the first ten minutes of drying -
     # not two hours later as WashData said (13:19).
     when, today = finished[-1]
@@ -63,7 +63,7 @@ def test_dishwasher_learned_is_faster():
 
 
 def test_washer_and_dryer():
-    for kind, starts in (("washer", ["10-29 15:02", "10-29 20:24", "10-30 12:09"]),
+    for kind, starts in (("washer", ["10-29 15:00", "10-29 20:24", "10-30 12:08"]),
                          ("dryer", ["10-28 20:48", "10-29 21:36", "10-30 15:17"])):
         finished, events = run(kind)
         assert [local(c["start"]) for _, c in finished] == starts, kind
@@ -174,3 +174,40 @@ def test_lost_power_reading():
     assert len(events) == 1
     assert [c["end_reason"] for e, c in events if e == "finished"] == ["power_lost"]
     assert not learning.is_clean(d.cycle, PROFILES["washer"])
+
+
+def test_quiet_rinse_programme():
+    """A cold rinse only runs a small pump at 9-15 W (seen on the real dishwasher): still a programme."""
+    d = Detector(PROFILES["dishwasher"], standby=0.2)
+    t = 7_000_000.0
+    events = []
+    def at(w, minutes):
+        nonlocal t
+        events.extend(d.sample(t, w))
+        for _ in range(int(minutes * 2)):
+            t += 30
+            events.extend(d.tick(t))
+    at(0.2, 10)
+    at(3, 0.5)
+    at(12, 15)
+    assert d.state == STATE_RUNNING
+    at(0.2, 15)
+    finished = [c for e, c in events if e == "finished"]
+    assert len(finished) == 1 and 14 * 60 <= finished[0]["duration"] <= 16 * 60
+
+
+def test_drying_after_emptied_is_not_a_rinse():
+    d = Detector(PROFILES["dishwasher"], standby=0.2)
+    t = 8_000_000.0
+    def at(w, minutes):
+        nonlocal t
+        d.sample(t, w)
+        for _ in range(int(minutes * 2)):
+            t += 30
+            d.tick(t)
+    at(1900, 20)
+    at(12, 12)
+    assert d.state == STATE_FINISHED
+    d.emptied(t)
+    at(12, 15)  # still drying after the button was pressed
+    assert d.state == STATE_OFF and d.cycle is None

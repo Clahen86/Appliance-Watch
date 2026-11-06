@@ -58,6 +58,8 @@ class Detector:
         self.after_bursts = 0
         self._burst: dict[str, float] | None = None
         self._unavailable_since: float | None = None
+        # Just emptied while still drying at a few watts: that isn't a new (quiet) programme.
+        self._low_blocked = False
 
     # ---------- inputs ----------
 
@@ -69,10 +71,11 @@ class Detector:
             self.w = None
             return events + self._check(t)
         self._unavailable_since = None
-        p = self.profile
-        if self.state == STATE_OFF and w < p.active_w:
+        if self.state == STATE_OFF and self.cycle is None and w < self.low_w:
             self.standby = w if self.standby is None else self.standby * 0.95 + w * 0.05
-        if w >= p.active_w:
+        if w <= self.off_w:
+            self._low_blocked = False
+        if w >= self._threshold():
             events += self._active(t, w)
         self.w = w
         return events + self._check(t)
@@ -113,6 +116,28 @@ class Detector:
             events += self._finish(t, "forced")
         return events
 
+    # ---------- levels ----------
+
+    @property
+    def low_w(self) -> float:
+        """A quiet programme (a cold rinse at 5-15 W) is above this - well over standby, under a pump or motor."""
+        return max(4.0, self.off_w * 2)
+
+    def _act(self) -> float:
+        """Above this the running cycle is doing something: low for a quiet programme, until it shows more."""
+        c = self.cycle
+        return c.get("act_w", self.profile.active_w) if c else self.profile.active_w
+
+    def _threshold(self) -> float:
+        if self.state == STATE_FINISHED:
+            return self.profile.active_w
+        if self.cycle is None:
+            return self.profile.active_w if self._low_blocked else self.low_w
+        return self._act()
+
+    def _low(self) -> bool:
+        return self._act() < self.profile.active_w
+
     # ---------- what happens over time ----------
 
     def _advance(self, t: float) -> list[tuple[str, Any]]:
@@ -130,7 +155,7 @@ class Detector:
             c["lost_s"] += dt
             return []
         p = self.profile
-        active = w >= p.active_w
+        active = w >= (p.active_w if self.state == STATE_FINISHED else self._act())
         if self.state == STATE_FINISHED:
             if self._burst is not None and active:
                 self._burst["wh"] += w * dt / 3600
@@ -153,9 +178,13 @@ class Detector:
         if self.cycle is None:
             self.cycle = new_cycle(t)
             self.confirmed = False
+            if w < p.active_w:
+                self.cycle["act_w"] = self.low_w
         c = self.cycle
+        if w >= p.active_w and self._low():
+            c.pop("act_w")  # more than a quiet programme: from now on only real work counts
         quiet = t - c["last_active"]
-        if self.confirmed and quiet >= GAP_MIN_S and (self.w is None or self.w < p.active_w):
+        if self.confirmed and quiet >= GAP_MIN_S and (self.w is None or self.w < self._act()):
             c["gaps"].append(round(quiet))
         if w >= p.heat_w and (self.w is None or self.w < p.heat_w):
             c["phases"] += 1
@@ -183,9 +212,10 @@ class Detector:
             return self._check_finished(t)
         if c is None:
             return events
-        quiet = t - c["last_active"] if (self.w is None or self.w < p.active_w) else 0.0
+        quiet = t - c["last_active"] if (self.w is None or self.w < self._act()) else 0.0
         if not self.confirmed:
-            if c["heat_s"] > 0 or (c["wh"] >= START_WH and t - c["start"] >= 60):
+            low_start = self._low() and c["active_s"] >= 180 and c["wh"] >= 0.4
+            if c["heat_s"] > 0 or (c["wh"] >= START_WH and t - c["start"] >= 60) or low_start:
                 self.confirmed = True
                 self.state = STATE_RUNNING
                 events.append(("started", c))
@@ -203,7 +233,7 @@ class Detector:
             return events
         if self._may_finish(t):
             return events + self._finish(t, "quiet")
-        heated = c["heat_s"] > 0 or not p.needs_heat
+        heated = c["heat_s"] > 0 or not p.needs_heat or self._low()
         # "Nearly done" only after a rest longer than the programme's own pauses, so it doesn't flicker.
         if self.state == STATE_RUNNING and quiet >= max(FINISHING_AFTER_S, self.end_quiet_s * 0.75) and heated \
                 and t - c["start"] >= p.min_cycle_s:
@@ -215,10 +245,10 @@ class Detector:
         p, c = self.profile, self.cycle
         if c is None:
             return False
-        if self.w is not None and self.w >= p.active_w:
+        if self.w is not None and self.w >= self._act():
             return False
         quiet = t - c["last_active"]
-        heated = c["heat_s"] > 0 or not p.needs_heat
+        heated = c["heat_s"] > 0 or not p.needs_heat or self._low()
         if door:
             return quiet >= 30 and heated and t - c["start"] >= p.min_cycle_s
         need = self.end_quiet_s if heated else max(self.end_quiet_s, 1200)
@@ -291,6 +321,7 @@ class Detector:
         return [("resumed", c)]
 
     def _emptied(self) -> list[tuple[str, Any]]:
+        self._low_blocked = self.w is not None and self.w > self.off_w
         self._reset()
         return [("emptied", None)]
 

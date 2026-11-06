@@ -60,11 +60,14 @@ class ApplianceWatchPanel extends HTMLElement {
   get w() { return TEXTS[this.L]; }
 
   async _connect() {
+    this._unsub?.();
+    this._unsub = null;
+    clearInterval(this._timer);
     const r = await this._ws({ type: "appliance_watch/machines" });
     Object.assign(this, { _machines: r.machines, _admin: r.admin, _found: r.found, _hasPrice: r.has_price, _hasAi: r.has_ai });
     this._render();
     this._unsub = await this._hass.connection.subscribeMessage((m) => this._live(m.machines), { type: "appliance_watch/subscribe" });
-    this._timer = setInterval(() => this._view === "list" && this._render(), 30000);
+    this._timer = setInterval(() => this._view === "list" && this._patchList(), 30000);
   }
   disconnectedCallback() {
     this._unsub?.();
@@ -79,8 +82,11 @@ class ApplianceWatchPanel extends HTMLElement {
 
   _live(machines) {
     const before = Object.fromEntries(this._machines.map((m) => [m.entry_id, m.state + (m.last?.id || "")]));
+    const shape = this._shape();
     this._machines = machines;
-    if (this._view === "list") return this._render();
+    // Only draw the page again when something changes shape; otherwise just the numbers (no flicker, the
+    // animations keep running).
+    if (this._view === "list") return shape === this._shape() ? this._patchList() : this._render();
     if (this._view === "machine") {
       const m = machines.find((x) => x.entry_id === this._open);
       if (!m) return;
@@ -91,6 +97,26 @@ class ApplianceWatchPanel extends HTMLElement {
   async _loadFull(id) {
     this._full[id] = await this._ws({ type: "appliance_watch/machine", entry_id: id });
     if (this._view === "machine" && this._open === id && !this.shadowRoot.activeElement?.matches?.("input")) this._render();
+  }
+
+  _shape() {
+    return this._machines.map((m) => [m.entry_id, m.name, m.kind, m.state, (m.findings || []).length, !!m.cheap,
+      m.progress != null].join("|")).join(";");
+  }
+
+  _patchList() {
+    const r = this.shadowRoot;
+    for (const m of this._machines) {
+      const card = r.querySelector(`[data-open="${m.entry_id}"]`);
+      if (!card) return this._render();
+      const s = this._status(m);
+      card.querySelector(".main").innerHTML = s.main;
+      card.querySelector(".sub").textContent = s.sub;
+      card.querySelector(".chips").innerHTML = this._chips(m);
+      const bar = card.querySelector(".progress:not(.indet) span");
+      if (bar) bar.style.width = `${m.progress || 0}%`;
+      card.querySelectorAll(".aw-display").forEach((el) => (el.textContent = display(m)));
+    }
   }
 
   // ---------- drawing ----------
@@ -138,17 +164,23 @@ class ApplianceWatchPanel extends HTMLElement {
     return { main: w.states.off, sub: last };
   }
 
-  _card(m) {
-    const t = this.t, w = this.w, s = this._status(m);
+  _chips(m) {
+    const t = this.t, w = this.w;
     const active = m.state === "running" || m.state === "finishing";
-    const bar = active && m.progress != null ? `<div class="progress"><span style="width:${m.progress}%"></span></div>` : active ? `<div class="progress indet"><span></span></div>` : "";
-    const chips = [
+    return [
       active ? `<span class="chip prog">${esc(m.program || w.unknownTime)}</span>` : "",
       active && m.live_cost != null ? `<span class="chip">${money(m.live_cost, m.currency)} ${t.sinceStart}</span>` : "",
       active && m.power != null ? `<span class="chip">⚡ ${Math.round(m.power)} ${t.watts}</span>` : "",
       m.state === "off" && m.cheap ? `<span class="chip cheap">💡 ${w.cheap} ${clock(m.cheap.start)} · ${w.save} ${money(m.cheap.saving, m.currency)}</span>` : "",
       ...(m.findings || []).slice(-1).map((f) => `<span class="chip warn">⚠️ ${esc(f.text)}</span>`),
     ].join("");
+  }
+
+  _card(m) {
+    const w = this.w, s = this._status(m);
+    const active = m.state === "running" || m.state === "finishing";
+    const bar = active && m.progress != null ? `<div class="progress"><span style="width:${m.progress}%"></span></div>` : active ? `<div class="progress indet"><span></span></div>` : "";
+    const chips = this._chips(m);
     return `<div class="card m-${m.state}" style="--a:${ACCENT[m.kind] || ACCENT.other}" data-open="${m.entry_id}">
       <div class="art">${machineSVG(m.kind, m.state, { display: display(m), uid: m.entry_id.slice(-6) })}</div>
       <div class="info">

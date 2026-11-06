@@ -13,10 +13,15 @@ class ApplianceWatchCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const ids = this._ids();
-    const key = ids.map((id) => { const s = hass.states[id]; return s ? s.last_updated + s.state : ""; }).join("|") + hass.themes?.darkMode;
-    if (key !== this._key) { this._key = key; this._render(); }
+    const states = ids.map((id) => hass.states[id]);
+    if (states.every((s, i) => s === this._states?.[i]) && states.length === this._states?.length) return;
+    this._states = states;
+    // Drawn again only when a machine changes state; otherwise only the text moves (no flicker).
+    const shape = ids.map((id) => { const s = hass.states[id]; return s ? [s.state, s.attributes.kind, s.attributes.name].join("|") : ""; }).join(";")
+      + JSON.stringify(this._config);
+    if (shape !== this._shape) { this._shape = shape; this._render(); } else this._patch();
   }
-  connectedCallback() { this._tick = setInterval(() => this._render(), 30000); }
+  connectedCallback() { this._tick = setInterval(() => this._patch(), 30000); }
   disconnectedCallback() { clearInterval(this._tick); }
   _ids() {
     const c = this._config || {};
@@ -54,7 +59,22 @@ class ApplianceWatchCard extends HTMLElement {
       this._hass.callService("appliance_watch", "emptied", { entity_id: el.dataset.empty })));
   }
 
-  _one(m, w, L, single) {
+  _patch() {
+    if (!this._hass || !this.shadowRoot) return;
+    const L = lang(this._hass), w = TEXTS[L];
+    for (const id of this._ids()) {
+      const m = this._machine(id), el = this.shadowRoot.querySelector(`[data-more="${id}"]`);
+      if (!m || !el) return this._render();
+      const x = this._text(m, w, L);
+      el.querySelector(".main").innerHTML = x.main;
+      el.querySelector(".sub").innerHTML = x.sub;
+      const bar = el.querySelector(".bar span");
+      if (bar) bar.style.width = `${m.progress ?? 8}%`;
+      el.querySelectorAll(".aw-display").forEach((d) => (d.textContent = display(m)));
+    }
+  }
+
+  _text(m, w, L) {
     const active = m.state === "running" || m.state === "finishing";
     const left = minutesLeft(m.finish_time);
     let main, sub = "";
@@ -69,6 +89,12 @@ class ApplianceWatchCard extends HTMLElement {
       sub = m.cheap ? `💡 ${w.cheap} ${clock(m.cheap.start)} · ${w.save} ${money(m.cheap.saving, m.currency)}`
         : m.last ? [m.last.program, dur(m.last.duration, L), money(m.last.cost, m.currency)].filter(Boolean).map(esc).join(" · ") : "";
     }
+    return { main, sub };
+  }
+
+  _one(m, w, L, single) {
+    const active = m.state === "running" || m.state === "finishing";
+    const { main, sub } = this._text(m, w, L);
     const bar = active ? `<div class="bar"><span style="width:${m.progress ?? 8}%"></span></div>` : "";
     return `<div class="m s-${m.state}" style="--a:${ACCENT[m.kind] || ACCENT.other}" data-more="${m.entity_id}">
       <div class="art">${machineSVG(m.kind, m.state, { display: display(m), uid: m.entity_id.replace(/\W/g, "").slice(-10) })}</div>

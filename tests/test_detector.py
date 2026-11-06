@@ -212,3 +212,23 @@ def test_drying_after_emptied_is_not_a_rinse():
     d.emptied(t)
     at(12, 15)  # still drying after the button was pressed
     assert d.state == STATE_OFF and d.cycle is None
+
+
+def test_goes_on_after_done_by_hand():
+    """'It's done' pressed in a pause (seen on the real rinse): when it goes on, it's the same cycle."""
+    d = Detector(PROFILES["dishwasher"], standby=0.2)
+    t = 9_000_000.0
+    events = []
+    def at(w, minutes):
+        nonlocal t
+        events.extend(d.sample(t, w))
+        for _ in range(int(minutes * 2)):
+            t += 30
+            events.extend(d.tick(t))
+    at(12, 4)
+    at(45, 6)
+    at(4, 5)
+    events.extend(d.force_finish(t))
+    at(4, 8)
+    at(45, 6)
+    assert [e for e, _ in events if e in ("finished", "resumed", "started")] == ["started", "finished", "resumed"]

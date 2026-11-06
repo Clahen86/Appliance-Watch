@@ -287,7 +287,7 @@ class Detector:
         if b is not None:
             long_enough = b["last"] - b["t"] >= p.burst_s or b["wh"] >= 3 * START_WH or b["heat"]
             soon = b["t"] - self.finished_at <= RESUME_WINDOW_S
-            if long_enough and soon and not self.door_opened and c["end_reason"] == "quiet":
+            if long_enough and soon and not self.door_opened and c["end_reason"] in ("quiet", "forced"):
                 return self._resume(t)
             if long_enough:
                 # A new programme: the last one was emptied without anyone telling.

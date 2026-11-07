@@ -145,9 +145,10 @@ class Machine:
         if (state := self.hass.states.get(power)) is not None:
             self._handle(self.detector.sample(time.time(), _watts(state.state, state.attributes)))
         self._refresh()
-        # Learn from the power readings Home Assistant has - a new machine knows it from day one, and a cycle missed
-        # while Home Assistant was busy is found again. Only cycles not already known (or deleted) are added.
-        self.hass.async_create_background_task(self.async_learn_history(), f"{DOMAIN} learn {self.name}")
+        if not self.imported:
+            # A new machine learns from the power readings Home Assistant has, once - after that the history is the
+            # user's (what they delete stays deleted).
+            self.hass.async_create_background_task(self.async_learn_history(), f"{DOMAIN} learn {self.name}")
 
     async def async_learn_history(self, days: int = 10) -> int:
         """Find the cycles in the recorded power readings and learn from them. Returns how many were added."""

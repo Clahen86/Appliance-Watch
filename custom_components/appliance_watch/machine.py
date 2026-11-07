@@ -73,6 +73,7 @@ class Machine:
         self.cheap: dict[str, Any] | None = None
         self.notified_done: float | None = None
         self.imported = False
+        self.deleted: list[float] = []
         self._last_wh = 0.0
         self._saved = 0.0
         self._unsubs: list[Any] = []
@@ -131,6 +132,7 @@ class Machine:
         self.findings = data.get("findings", [])
         self.notified_done = data.get("notified_done")
         self.imported = bool(data.get("imported"))
+        self.deleted: list[float] = data.get("deleted", [])
         self.detector.load(data.get("detector"), time.time())
         self.detector.finish_after_drying = bool(self.hub.settings.get(SET_FINISH_AFTER_DRY))
         self._last_wh = (self.detector.cycle or {}).get("wh", 0.0)
@@ -143,9 +145,9 @@ class Machine:
         if (state := self.hass.states.get(power)) is not None:
             self._handle(self.detector.sample(time.time(), _watts(state.state, state.attributes)))
         self._refresh()
-        if not self.imported:
-            # New machine: learn from the power readings Home Assistant already has, so it knows it from day one.
-            self.hass.async_create_background_task(self.async_learn_history(), f"{DOMAIN} learn {self.name}")
+        # Learn from the power readings Home Assistant has - a new machine knows it from day one, and a cycle missed
+        # while Home Assistant was busy is found again. Only cycles not already known (or deleted) are added.
+        self.hass.async_create_background_task(self.async_learn_history(), f"{DOMAIN} learn {self.name}")
 
     async def async_learn_history(self, days: int = 10) -> int:
         """Find the cycles in the recorded power readings and learn from them. Returns how many were added."""
@@ -176,7 +178,7 @@ class Machine:
                     x += 30
             cycles += [c for e, c in d.sample(ts, _watts(st.state, attrs)) if e == "finished"]
             last = ts
-        taken = [(c["start"], c.get("end") or c["start"]) for c in self.cycles]
+        taken = [(c["start"], c.get("end") or c["start"]) for c in self.cycles] + [(x, x) for x in self.deleted]
         if self.detector.cycle is not None:
             taken.append((self.detector.cycle["start"], time.time()))
         added = 0
@@ -217,6 +219,7 @@ class Machine:
         await self.store.async_save({
             "cycles": self.cycles[-CYCLES_KEPT:], "programs": self.programs, "findings": self.findings,
             "detector": self.detector.dump(), "notified_done": self.notified_done, "imported": self.imported,
+            "deleted": self.deleted[-100:],
         })
 
     @callback
@@ -518,6 +521,7 @@ class Machine:
         await self._save()
 
     async def async_delete_cycle(self, cycle_id: str) -> None:
+        self.deleted += [c["start"] for c in self.cycles if c.get("id") == cycle_id]  # so history doesn't bring it back
         self.cycles = [c for c in self.cycles if c.get("id") != cycle_id]
         self._drop_empty_programs()
         self._refresh()

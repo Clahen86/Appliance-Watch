@@ -21,20 +21,30 @@ no motor) and the machine has only rested longer than its own programme ever pau
   "has run unusually long".
 - **Notifications** – to whoever is home, with an *Emptied ✓* button, a reminder if nobody empties it, and
   "move the laundry to the dryer".
+- **Speakers** – says it out loud: done, nearly done, not emptied, move to the dryer, emptied, started – each on or off.
+  Music pauses and comes back, quiet at night (said in the morning instead), only when someone is home.
+- **Learns from your history** – a new machine learns its programmes from the power history Home Assistant already
+  has, so it's good from day one.
+- **Your month at a glance** – cycles, kWh and cost this month, a timeline of today, and a live power curve while it
+  runs.
 - **Assist** – "when is the dishwasher done?"
 - **AI helper (optional)** – names programmes and explains odd cycles. It never measures anything.
 - **Finds your machines** – power sensors named like a dishwasher, washing machine or dryer show up as discovered.
 
 ## The panel and the card
 
-![Panel](docs/panel.png) ![Card](docs/card.png)
+![Panel – light and dark](docs/panel.png)
+
+![A machine and the settings](docs/detail.png)
+
+![Card](docs/card.png)
 
 Every machine drawn as itself and animated while it runs – the drum turns, water sloshes, a dryer glows, a dishwasher
 sprays and steams. The card comes with the integration: *Add card → Appliance Watch*, pick one machine or show them all.
 
 ## Install
 
-HACS → ⋮ → Custom repositories → `https://github.com/Clahen86/ha-appliance-watch` (Integration) → install → restart.
+HACS → ⋮ → Custom repositories → `https://github.com/Clahen86/appliance-watch` (Integration) → install → restart.
 Then *Settings → Devices & services*: your machines are discovered, or *Add integration → Appliance Watch*.
 You need a smart plug that measures power (W) on each machine.
 
@@ -50,5 +60,10 @@ You need a smart plug that measures power (W) on each machine.
 - **Færdig kl. 14:35**, **pris pr. vask** og **billigste starttidspunkt**.
 - **Slid og fejl** – fx "afkalk den" eller "stoppede meget tidligere end normalt".
 - **Besked** til den der er hjemme, med *Tømt ✓*, påmindelse og "flyt tøjet til tørretumbleren".
+- **Højttalere** – siger det højt (færdig, snart færdig, ikke tømt, flyt til tørretumbleren …), stille om natten.
+- **Lærer fra historikken** – en ny maskine lærer sine programmer ud fra den historik, Home Assistant allerede har.
+- **Månedens tal**, tidslinje for i dag og live-kurve, mens den kører.
 - **Assist** – "hvornår er opvaskeren færdig?"
 - **Panel og kort** med animerede maskiner.
+
+![Panel](docs/panel_da.png)

@@ -5,10 +5,10 @@
   "codeowners": ["@Clahen86"],
   "config_flow": true,
   "dependencies": ["frontend", "http", "panel_custom", "repairs", "websocket_api"],
-  "documentation": "https://github.com/Clahen86/ha-appliance-watch",
+  "documentation": "https://github.com/Clahen86/appliance-watch",
   "integration_type": "device",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/Clahen86/ha-appliance-watch/issues",
+  "issue_tracker": "https://github.com/Clahen86/appliance-watch/issues",
   "requirements": [],
   "version": "0.2.0"
 }

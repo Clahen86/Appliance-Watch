@@ -2,6 +2,12 @@
 
 **Knows when your dishwasher, washing machine and dryer are *really* done** – from what the machine does, not from a clock.
 
+| | |
+|---|---|
+| **Languages** | English and Danish (panel, card, notifications, speakers, Assist). Other languages show English. |
+| **Currency** | Any – taken from your price sensor's unit (kr, €, £, $ …). Works with Strømligning, Nord Pool, Energi Data Service, Tibber and other price sensors. No price sensor? Everything works, just without costs. |
+| **Machines** | Dishwasher, washing machine and dryer – any brand, via a smart plug that measures power (W). |
+
 ![Machines](docs/machines.png)
 
 Most "is it done?" integrations wait for a learned duration or for 0 W. A dishwasher that dries at 5–15 W for half an
@@ -53,6 +59,8 @@ You need a smart plug that measures power (W) on each machine.
 ## Dansk
 
 **Ved hvornår opvaskeren, vaskemaskinen og tørretumbleren *virkelig* er færdige** – ud fra hvad maskinen gør, ikke et ur.
+
+**Sprog:** dansk og engelsk (andre sprog viser engelsk). **Valuta:** alle – den tages fra din pris-sensors enhed (kr, €, £ …). Uden pris-sensor virker alt, bare uden priser.
 
 - **Færdig når den er færdig** – lærer pauserne i hvert program; en dørsensor gør det øjeblikkeligt.
 - **Lærer aldrig af sine egne fejl** – kun vaske med en tydelig slutning bruges.

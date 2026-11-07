@@ -22,7 +22,7 @@ const T = {
     title: "Appliances", settings: "Settings", back: "Back", menu: "Menu", saved: "Saved ✓", add: "Add machine",
     found: "Found in your home", addIt: "Add", running: "running", done: "done", ready: "All ready", month: "This month",
     cycles: "cycles", sinceStart: "so far", last: "Last", soon: "any minute", min: "min", now: "now",
-    learnHistory: "Learn from the last 10 days", learned_n: "Found {n} cycles in the history",
+    today: "Today", learnHistory: "Learn from the last 10 days", learned_n: "Found {n} cycles in the history",
     k: {
       title: "Speakers", hint: "Says it out loud, so you don't need the phone. Music pauses and comes back.", which: "Speak on",
       none: "No speakers that can announce", say: "What it says - tap to switch on or off",
@@ -54,7 +54,7 @@ const T = {
     title: "Maskiner", settings: "Indstillinger", back: "Tilbage", menu: "Menu", saved: "Gemt ✓", add: "Tilføj maskine",
     found: "Fundet i dit hjem", addIt: "Tilføj", running: "kører", done: "færdig", ready: "Alle er klar", month: "Denne måned",
     cycles: "vaske", sinceStart: "indtil nu", last: "Sidst", soon: "om lidt", min: "min", now: "nu",
-    learnHistory: "Lær fra de sidste 10 dage", learned_n: "Fandt {n} vaske i historikken",
+    today: "I dag", learnHistory: "Lær fra de sidste 10 dage", learned_n: "Fandt {n} vaske i historikken",
     k: {
       title: "Højttalere", hint: "Den siger det højt, så du ikke behøver telefonen. Musikken holder pause og kommer igen.", which: "Tal i",
       none: "Ingen højttalere der kan annoncere", say: "Det den siger - tryk for at slå til og fra",
@@ -145,11 +145,18 @@ class ApplianceWatchPanel extends HTMLElement {
 
   _shape() {
     return this._machines.map((m) => [m.entry_id, m.name, m.kind, m.state, (m.findings || []).length, !!m.cheap,
-      m.progress != null].join("|")).join(";");
+      m.progress != null, !!m.spark].join("|")).join(";") + (this._headline().m?.entry_id || "") + this._totals().count;
   }
 
   _patchList() {
     const r = this.shadowRoot;
+    const h = this._headline();
+    const hh = r.getElementById("hh"), hs = r.getElementById("hsub");
+    if (hh) hh.innerHTML = h.title;
+    if (hs) hs.innerHTML = h.sub;
+    if (h.m) r.querySelectorAll(".hart .aw-display").forEach((el) => (el.textContent = display(h.m)));
+    const tl = r.querySelector(".tl");
+    if (tl) tl.outerHTML = this._timeline();
     for (const m of this._machines) {
       const card = r.querySelector(`[data-open="${m.entry_id}"]`);
       if (!card) return this._render();
@@ -160,6 +167,8 @@ class ApplianceWatchPanel extends HTMLElement {
       const bar = card.querySelector(".progress:not(.indet) span");
       if (bar) bar.style.width = `${m.progress || 0}%`;
       card.querySelectorAll(".aw-display").forEach((el) => (el.textContent = display(m)));
+      const sp = card.querySelector(".spark-live");
+      if (sp && m.spark) sp.innerHTML = this._chart(m.spark, m.kind, 26, true);
     }
   }
 
@@ -181,6 +190,7 @@ class ApplianceWatchPanel extends HTMLElement {
     if (this._view === this._lastView) window.scrollTo(0, y);
     this._lastView = this._view;
     this._wire();
+    if (this._view === "list") this._countUp();
   }
 
   _bar(title, back) {
@@ -188,6 +198,7 @@ class ApplianceWatchPanel extends HTMLElement {
     return `<div class="bar">
       ${back ? `<button class="icon" data-act="back" title="${t.back}">←</button>` : this._narrow ? `<button class="icon" data-act="menu" title="${t.menu}">☰</button>` : ""}
       <h1>${title}</h1>
+      ${!back && this._admin && this._view === "list" ? `<button class="icon plus" data-act="addflow" title="${t.add}">+</button>` : ""}
       ${!back && this._admin ? `<button class="icon" data-act="settings" title="${t.settings}">⚙️</button>` : ""}
     </div>`;
   }
@@ -201,10 +212,11 @@ class ApplianceWatchPanel extends HTMLElement {
       <div><b>${esc(f.name)}</b><div class="muted">${esc(f.entity_id)}</div></div><button class="primary" data-act="addflow">${t.addIt}</button></div>`).join("");
     const h = this._headline();
     return `${this._bar(t.title)}<main>
-      <div class="hero" style="--a:${h.color}"><i class="blob b1"></i><i class="blob b2"></i>
-        <div class="htxt"><div class="hk">${h.kicker}</div><h2>${h.title}</h2><div class="hs">${h.sub}</div>
-          <div class="pills">${pills}</div></div>
-        ${this._admin ? `<button class="glass" data-act="addflow">+ ${t.add}</button>` : ""}</div>
+      <div class="hero ${h.m ? "has-art" : ""}" style="--a:${h.color}"><i class="blob b1"></i><i class="blob b2"></i>
+        <div class="htxt"><div class="hk">${h.kicker}</div><h2 id="hh">${h.title}</h2><div class="hs" id="hsub">${h.sub}</div>
+          ${this._stats()}</div>
+        ${h.m ? `<div class="hart">${machineSVG(h.m.kind, h.m.state, { display: display(h.m), uid: "h" + h.m.entry_id.slice(-6) })}</div>` : ""}</div>
+      ${ms.length ? this._timeline() : ""}
       ${ms.length ? `<div class="grid">${ms.map((m) => this._card(m)).join("")}</div>` : `<div class="empty">${machineSVG("washer", "off", { uid: "e" })}<p>${this.w.noMachines}</p></div>`}
       ${found ? `<section><h3>🔎 ${t.found}</h3>${found}</section>` : ""}
     </main>`;
@@ -215,15 +227,71 @@ class ApplianceWatchPanel extends HTMLElement {
     const d = new Date().toLocaleDateString(this.L === "da" ? "da-DK" : undefined, { weekday: "long", day: "numeric", month: "long" });
     const today = d.charAt(0).toUpperCase() + d.slice(1);
     const fin = ms.find((m) => m.state === "finished");
-    if (fin) return { kicker: today, title: `${esc(fin.name)} ${t.isDone}`, sub: w.waiting, color: "#22c55e" };
+    if (fin) return { kicker: today, title: `${esc(fin.name)} ${t.isDone}`, sub: w.waiting, color: "#22c55e", m: fin };
     const run = ms.filter((m) => m.state === "running" || m.state === "finishing")
       .sort((a, b) => (a.finish_time ? new Date(a.finish_time) : 9e15) - (b.finish_time ? new Date(b.finish_time) : 9e15))[0];
     if (run) {
       const left = minutesLeft(run.finish_time);
       return { kicker: today, title: run.finish_time ? `${esc(run.name)} ${w.doneAt} ${clock(run.finish_time)}` : `${esc(run.name)} ${t.isRunning}`,
-        sub: run.finish_time ? `${hm(left)} ${w.left}${run.program ? " · " + esc(run.program) : ""}` : w.unknownTime, color: ACCENT[run.kind] };
+        sub: run.finish_time ? `${hm(left)} ${w.left}${run.program ? " · " + esc(run.program) : ""}` : w.unknownTime, color: ACCENT[run.kind], m: run };
     }
     return { kicker: today, title: t.allReady, sub: ms.length ? t.readySub : "", color: "#6366f1" };
+  }
+
+  _totals() {
+    const ms = this._machines, sum = (k) => ms.reduce((a, m) => a + ((m.month || {})[k] || 0), 0);
+    const anyCost = ms.some((m) => m.month?.cost != null);
+    return { count: sum("count"), kwh: sum("kwh"), cost: anyCost ? sum("cost") : null, currency: ms.find((m) => m.currency)?.currency };
+  }
+
+  _stats() {
+    const t = this.t, x = this._totals();
+    if (!x.count) return "";
+    return `<div class="hstats"><div><b data-count="${x.count}" data-dec="0">${x.count}</b><span>${t.cycles}</span></div>
+      <div><b data-count="${x.kwh}" data-dec="1">${num(x.kwh, this.L, 1)}</b><span>kWh</span></div>
+      ${x.cost != null ? `<div><b data-count="${x.cost}" data-dec="2" data-money="${esc(x.currency || "")}">${money(x.cost, x.currency)}</b><span>${t.month.toLowerCase()}</span></div>` : ""}</div>`;
+  }
+
+  _countUp() {
+    if (this._counted) return;
+    this._counted = true;
+    const els = [...this.shadowRoot.querySelectorAll("[data-count]")];
+    const t0 = performance.now(), dur = 1100;
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      for (const el of els) {
+        const v = Number(el.dataset.count) * e, d = Number(el.dataset.dec);
+        el.textContent = el.dataset.money !== undefined ? money(v, el.dataset.money) : num(v, this.L, d);
+      }
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  _timeline() {
+    const t = this.t, now = Date.now() / 1000;
+    const day = new Date(); day.setHours(0, 0, 0, 0);
+    const d0 = day.getTime() / 1000;
+    const starts = this._machines.flatMap((m) => (m.today || []).map((c) => c[0]).concat(m.started ? [Date.parse(m.started) / 1000] : []));
+    const first = Math.min(...starts.filter((x) => x >= d0), now - 3600);
+    const from = Math.min(6, Math.floor((first - d0) / 3600)), to = 24;
+    const a = d0 + from * 3600, span = (to - from) * 3600;
+    const pos = (x) => `${Math.max(0, Math.min(100, ((x - a) / span) * 100)).toFixed(2)}%`;
+    const width = (x, y) => `${Math.max(0.6, ((Math.min(y, a + span) - Math.max(x, a)) / span) * 100).toFixed(2)}%`;
+    const rows = this._machines.map((m) => {
+      const bars = (m.today || []).map((c) => `<i class="bar done" style="left:${pos(c[0])};width:${width(c[0], c[1])}"></i>`).join("");
+      let live = "";
+      if ((m.state === "running" || m.state === "finishing") && m.started) {
+        const st = Date.parse(m.started) / 1000;
+        live = `<i class="bar live" style="left:${pos(st)};width:${width(st, now)}"></i>`;
+        if (m.finish_time) { const f = Date.parse(m.finish_time) / 1000; live += `<i class="bar ghost" style="left:${pos(now)};width:${width(now, f)}"></i>`; }
+      }
+      return `<div class="tlrow" style="--a:${ACCENT[m.kind] || ACCENT.other}"><span class="tln">${esc(m.name)}</span><div class="tltrack">${bars}${live}</div></div>`;
+    }).join("");
+    const hours = [];
+    for (let h = from; h <= to; h += (to - from > 12 ? 6 : 3)) hours.push(`<span style="left:${(((h - from) / (to - from)) * 100).toFixed(2)}%">${String(h % 24).padStart(2, "0")}</span>`);
+    return `<section class="card tl"><div class="tlhead"><h3>${t.today}</h3></div><div class="tlbody">${rows}
+      <div class="tlaxis">${hours.join("")}</div><div class="tlnow" style="left:calc(106px + (100% - 106px) * ${Math.max(0, Math.min(1, (now - a) / span)).toFixed(4)})"><span>${t.now}</span></div></div></section>`;
   }
 
   _status(m) {
@@ -261,7 +329,7 @@ class ApplianceWatchPanel extends HTMLElement {
       <div class="info">
         <div class="top"><div class="name">${esc(m.name)}</div><span class="state">${w.states[m.state]}</span></div>
         <div class="main">${s.main}</div><div class="sub muted">${esc(s.sub)}</div>
-        ${bar}<div class="chips">${chips}</div>
+        ${bar}${m.spark ? `<div class="spark-live">${this._chart(m.spark, m.kind, 26, true)}</div>` : ""}<div class="chips">${chips}</div>
         ${m.state === "finished" ? `<button class="primary done" data-act="emptied" data-id="${m.entry_id}">✓ ${w.emptied}</button>` : ""}
       </div>
     </div>`;
@@ -737,6 +805,32 @@ class ApplianceWatchPanel extends HTMLElement {
       .toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%, 80px); background:#323232; color:#fff; padding:10px 18px;
         border-radius:12px; font-size:14px; opacity:0; transition:.25s; z-index:9; max-width:90vw; }
       .toast.show { transform:translate(-50%, 0); opacity:1; } .toast.bad { background:#e5484d; }
+
+      /* ---------- front page: art in the banner, month, timeline ---------- */
+      .hero.has-art { padding-right:150px; min-height:150px; }
+      .hart { position:absolute; right:14px; bottom:-14px; width:128px; height:156px; filter:drop-shadow(0 18px 22px rgba(0,0,0,.35)); animation:bob 5s ease-in-out infinite; }
+      @keyframes bob { 50% { transform:translateY(-5px); } }
+      .hstats { display:flex; gap:18px; margin-top:14px; flex-wrap:wrap; }
+      .hstats div { display:flex; flex-direction:column; } .hstats b { font-size:22px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+      .hstats span { font-size:12px; opacity:.85; }
+      .icon.plus { font-size:28px; font-weight:300; line-height:1; }
+      .tl { margin:0 0 18px; padding:16px 16px 12px; }
+      .tlhead h3 { margin:0 0 10px; }
+      .tlbody { position:relative; padding-bottom:20px; }
+      .tlrow { display:flex; align-items:center; gap:10px; height:26px; }
+      .tln { width:96px; flex:none; font-size:12px; color:var(--secondary-text-color); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .tltrack { position:relative; flex:1; height:12px; border-radius:6px; background:var(--secondary-background-color); }
+      .tltrack .bar { position:absolute; top:0; height:100%; border-radius:6px; }
+      .bar.done { background:var(--a); opacity:.85; }
+      .bar.live { background:repeating-linear-gradient(-45deg, var(--a) 0 6px, color-mix(in srgb, var(--a) 70%, #fff) 6px 12px); background-size:17px 17px;
+        animation:stripes 1s linear infinite; box-shadow:0 0 10px color-mix(in srgb, var(--a) 70%, transparent); }
+      @keyframes stripes { to { background-position:17px 0; } }
+      .bar.ghost { border:2px dashed var(--a); box-sizing:border-box; opacity:.7; background:transparent; }
+      .tlaxis { position:absolute; left:106px; right:0; bottom:0; height:16px; }
+      .tlaxis span { position:absolute; transform:translateX(-50%); font-size:11px; color:var(--secondary-text-color); }
+      .tlnow { position:absolute; top:-4px; bottom:16px; width:2px; background:#ef4444; border-radius:1px; box-shadow:0 0 8px #ef4444; margin-left:0; }
+      .tlnow span { position:absolute; top:-14px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:#ef4444; }
+      .spark-live { margin-top:6px; height:26px; }
 
       /* ---------- speakers ---------- */
       .saygrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }

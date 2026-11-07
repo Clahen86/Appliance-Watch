@@ -20,6 +20,8 @@ const body = (u, h = 232) => `
     </linearGradient>
     <radialGradient id="glow${u}"><stop offset="0" stop-color="var(--aw-accent)" stop-opacity=".9"/><stop offset="1" stop-color="var(--aw-accent)" stop-opacity="0"/></radialGradient>
     <filter id="soft${u}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2"/></filter>
+    <linearGradient id="sh${u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
   </defs>
   <ellipse class="aw-shadow" cx="100" cy="${h + 4}" rx="78" ry="7" fill="#000" opacity=".18" filter="url(#soft${u})"/>`;
 
@@ -66,6 +68,7 @@ function washer(u, display, dryer) {
           <path d="M30 176 q15 -6 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 v40 h-180z" fill="#4895ef" opacity=".35"/></g>
           <g class="aw-bubbles"><circle cx="84" cy="176" r="2.5" fill="#fff" opacity=".6"/><circle cx="104" cy="182" r="1.8" fill="#fff" opacity=".6"/>
           <circle cx="118" cy="178" r="2.2" fill="#fff" opacity=".6"/></g>`}
+        <g transform="rotate(20 100 140)"><rect class="aw-shine" x="-60" y="20" width="34" height="260" fill="url(#sh${u})"/></g>
       </g>
       <path d="M68 116 a44 44 0 0 1 44 -16" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none" opacity=".35"/>
       <rect x="158" y="136" width="8" height="22" rx="4" fill="#b3bbc5"/>
@@ -100,6 +103,7 @@ function dishwasher(u, display) {
         </g>
         <g class="aw-arm" style="transform-origin:100px 172px"><rect x="70" y="169" width="60" height="6" rx="3" fill="#cbd5e1"/>
           <circle cx="100" cy="172" r="5" fill="#94a3b8"/></g>
+<g transform="rotate(20 100 140)"><rect class="aw-shine" x="-60" y="20" width="34" height="260" fill="url(#sh${u})"/></g>
         <g class="aw-steam">${[0, 1, 2].map((i) => `<circle class="aw-puff" style="--i:${i}" cx="${80 + i * 20}" cy="150" r="10" fill="#fff"/>`).join("")}</g>
       </g>
       <path d="M44 70 l30 0 l-26 50z" fill="#fff" opacity=".07"/>
@@ -162,7 +166,10 @@ export const MACHINE_CSS = `
   .aw-puff { opacity:0; }
   .aw-finishing .aw-puff, .aw-dishwasher.aw-finished .aw-puff { animation:aw-steam 3.6s ease-out infinite; animation-delay:calc(var(--i) * 1.1s); }
   .aw-dishwasher.aw-finished .aw-puff { animation-duration:5s; }
-  .aw-off .aw-svg { filter:saturate(.75); }
+  .aw-off .aw-svg { filter:saturate(.85); }
+  .aw-shine { opacity:0; transform-box:view-box; }
+  .aw-off .aw-shine, .aw-finished .aw-shine { animation:aw-sweep 7s ease-in-out infinite; }
+  @keyframes aw-sweep { 0%,55% { opacity:0; transform:translateX(0); } 62% { opacity:1; } 88% { opacity:1; } 100% { opacity:0; transform:translateX(260px); } }
   .aw-check { position:absolute; right:-4%; top:-4%; width:28%; animation:aw-pop .5s cubic-bezier(.2,1.6,.4,1) both; filter:drop-shadow(0 3px 6px rgba(0,0,0,.25)); }
   .aw-check svg { width:100%; display:block; }
   .aw-check path { stroke-dasharray:40; stroke-dashoffset:40; animation:aw-draw .5s .3s ease forwards; }

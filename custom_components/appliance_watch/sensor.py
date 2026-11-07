@@ -23,7 +23,8 @@ async def async_setup_entry(hass: HomeAssistant, entry, add: AddConfigEntryEntit
 class StatusSensor(MachineEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options = STATES
-    _unrecorded_attributes = frozenset({"cheap", "findings", "last", "power", "score", "live_wh", "live_cost"})
+    _unrecorded_attributes = frozenset({"cheap", "findings", "last", "power", "score", "live_wh", "live_cost", "month",
+                                        "today", "spark"})
 
     def __init__(self, machine) -> None:
         super().__init__(machine, "status")
@@ -36,7 +37,7 @@ class StatusSensor(MachineEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         s = self.machine.snapshot()
         last = s.pop("last")
-        for key in ("devices", "state", "live_id"):
+        for key in ("devices", "state", "live_id", "spark", "today"):
             s.pop(key, None)
         s["findings"] = [f["text"] for f in s["findings"]]
         if last:

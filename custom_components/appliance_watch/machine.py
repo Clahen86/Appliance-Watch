@@ -655,18 +655,22 @@ class Machine:
             ],
             "devices": {k: self.option(k) for k in (CONF_POWER, CONF_ENERGY, CONF_DOOR, CONF_SWITCH, CONF_SPEAKER)},
         }
+        month = dt_util.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
+        today = dt_util.start_of_local_day().timestamp()
+        this_month = [x for x in self.cycles if x.get("end") and x["end"] >= month]
+        costs = [x["cost"] for x in this_month if x.get("cost") is not None]
+        out["month"] = {"count": len(this_month), "kwh": round(sum(x["wh"] for x in this_month) / 1000, 1),
+                        "cost": round(sum(costs), 2) if costs else None}
+        # For the timeline on the front page: today's cycles (start and end, as timestamps).
+        out["today"] = [[round(x["start"]), round(x["end"])] for x in self.cycles if x.get("end") and x["end"] >= today]
+        out["spark"] = _thin(c["curve"][-90:], 45) if c and self.state in (STATE_RUNNING, STATE_FINISHING) else None
         if full:
-            month = dt_util.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            this_month = [x for x in self.cycles if x.get("end") and dt_util.utc_from_timestamp(x["end"]) >= month]
-            costs = [x["cost"] for x in this_month if x.get("cost") is not None]
             out["history"] = [self._cycle_out(x, language) for x in reversed(self.cycles[-60:])]
             out["programs"] = [
                 {"id": pid, "name": self.program_name(pid, language), "named": bool(p.get("name")),
                  "stats": learning.stats(cycles), "count": sum(1 for x in self.cycles if x.get("program") == pid)}
                 for pid, p in self.programs.items() for cycles in [self.learned().get(pid, [])]
             ]
-            out["month"] = {"count": len(this_month), "kwh": round(sum(x["wh"] for x in this_month) / 1000, 1),
-                            "cost": round(sum(costs), 2) if costs else None}
             out["live_curve"] = [round(x, 2) for x in c["curve"]] if c else None
             out["end_quiet"] = round(self.detector.end_quiet_s)
         return out

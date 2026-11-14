@@ -1,6 +1,7 @@
 // Appliance Watch panel: every machine as itself, live; history, programmes, settings.
 import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, LOCALES, machineSVG, minutesLeft, money, num, watchText } from "./machines.js";
 import { defineSupport, supportText } from "./support.js";
+import { defineSuggest } from "./suggest.js";
 
 // Programme names to pick from, per machine - only the ones that fit it.
 const SUGGEST = {
@@ -387,7 +388,7 @@ class ApplianceWatchPanel extends HTMLElement {
     const typed = Object.fromEntries([...r.querySelectorAll("input[data-keep]")].filter((i) => i.value).map((i) => [i.dataset.keep, i.value]));
     const focus = r.activeElement?.dataset?.keep;
     const y = window.scrollY;
-    const v = this._view === "support" ? `${this._bar(supportText(this._hass, "help"), true)}<main id="support-slot"></main>`
+    const v = this._view === "support" ? `${this._bar(supportText(this._hass, "help"), true)}<main id="support-slot"></main><main id="more-slot"></main>`
       : this._view === "settings" ? this._settingsView() : this._view === "machine" ? this._machineView() : this._listView();
     r.innerHTML = `${this._css()}<style>${MACHINE_CSS}</style>${v}<div id="sheetbox"></div><div class="toast"></div>`;
     this._sheetOpen = null;
@@ -401,6 +402,15 @@ class ApplianceWatchPanel extends HTMLElement {
       this._sup = this._sup || document.createElement(defineSupport("appliance_watch"));
       this._sup.hass = this._hass;
       slot.appendChild(this._sup);
+    }
+    // "Fits your home too" under the settings, and "From the same developer" under Help - kept between draws.
+    for (const [id, mode] of [["suggest-slot", "card"], ["more-slot", "list"]]) {
+      const el = r.getElementById(id);
+      if (!el) continue;
+      const k = `_sg_${mode}`;
+      if (!this[k]) { this[k] = document.createElement(defineSuggest("appliance_watch")); this[k].setAttribute("mode", mode); }
+      this[k].hass = this._hass;
+      el.appendChild(this[k]);
     }
     this._wire();
     if (this._view === "list") this._countUp();
@@ -756,6 +766,7 @@ class ApplianceWatchPanel extends HTMLElement {
         <select data-set="ai_task"><option value="">${t.s.off}</option>${s.ai_tasks.map((a) => `<option value="${a}" ${a === v.ai_task ? "selected" : ""}>${esc(this._hass.states[a]?.attributes.friendly_name || a)}</option>`).join("")}</select>
       </section>
       <section class="card tight">${toggle("finish_after_drying", t.s.dry, t.s.dryHint)}</section>
+      <div id="suggest-slot"></div>
     </main>`;
   }
 

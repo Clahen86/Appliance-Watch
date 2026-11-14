@@ -1,6 +1,6 @@
 // Appliance Watch panel: every machine as itself, live; history, programmes, settings.
 import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, LOCALES, machineSVG, minutesLeft, money, num, watchText } from "./machines.js";
-import { defineSupport, supportText } from "./support.js";
+import { defineSupport, defineUpdate, supportText } from "./support.js";
 import { defineSuggest } from "./suggest.js";
 
 // Programme names to pick from, per machine - only the ones that fit it.
@@ -402,6 +402,11 @@ class ApplianceWatchPanel extends HTMLElement {
       this._sup = this._sup || document.createElement(defineSupport("appliance_watch"));
       this._sup.hass = this._hass;
       slot.appendChild(this._sup);
+    }
+    if (this._view !== "support" && this._view !== "settings" && this._view !== "machine" && this._admin) {  // the update card on top of the list
+      this._upd = this._upd || document.createElement(defineUpdate("appliance_watch"));
+      this._upd.hass = this._hass;
+      r.querySelector("main")?.prepend(this._upd);
     }
     // "Fits your home too" under the settings, and "From the same developer" under Help - kept between draws.
     for (const [id, mode] of [["suggest-slot", "card"], ["more-slot", "list"]]) {

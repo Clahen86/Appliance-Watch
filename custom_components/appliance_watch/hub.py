@@ -156,7 +156,18 @@ class Hub:
             return [s for s, v in home.items() if v is not False]
         return services  # nobody is home: everyone hears it
 
+    def _house_chat_tells(self) -> bool:
+        """House Chat (Hus-chat) writes "done" in the family chat itself - then the phones don't get it twice."""
+        for entry in self.hass.config_entries.async_loaded_entries("hus_chat"):
+            try:
+                return bool(entry.runtime_data.get_rules()["machines"]["on"])
+            except Exception:  # noqa: BLE001
+                return False
+        return False
+
     async def async_notify(self, machine: Machine, title: str, message: str, emptied: bool = False) -> None:
+        if self._house_chat_tells():
+            return
         for service in self.targets():
             data: dict[str, Any] = {"title": title, "message": message}
             if service.startswith("notify.mobile_app_"):

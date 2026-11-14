@@ -39,7 +39,7 @@ no motor) and the machine has only rested longer than its own programme ever pau
 - **AI helper (optional)** – names programmes and explains odd cycles. It never measures anything.
 - **Finds your machines** – power sensors named like a dishwasher, washing machine or dryer show up as discovered.
 - **Works with Energy Pilot** – its *Runs cheaply* uses each machine's real programme (minutes and kWh) to start it at the cheapest time.
-- **🛟 Help** – press 🛟 in the panel to write to the developer; the answer comes back in the panel with a notification. Errors in the app are sent anonymously (can be turned off).
+- **🛟 Help** – press 🛟 in the panel to write to the developer; the answer comes back in the panel with a notification. Errors in the app are sent anonymously (can be turned off), once a day with how it is set up – the machines' kinds, the plug brands and what each entity is used for, with your own names taken out. Turn on *Share my setup* under 🛟 to send the full entity names too.
 
 ## The panel and the card
 

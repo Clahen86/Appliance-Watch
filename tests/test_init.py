@@ -260,3 +260,18 @@ async def test_speakers(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> 
         # Switched off: nothing
         await hub.async_save_settings({"say": {"done": False}})
         assert not hub.speaker.wants("done")
+
+
+async def test_setup_for_the_developer(hass: HomeAssistant) -> None:
+    """The daily setup: the machine's kind and entities with the user's names cleaned out."""
+    await _setup(hass)
+    support = hass.data["appliance_watch_support"]
+    info = support.setup_info()
+    assert info["counts"]["machines"] == 1
+    dev = info["devices"][0]
+    assert dev["kind"] == "dishwasher" and dev["ok"] is True
+    assert dev["entities"][0]["use"] == "power" and dev["entities"][0]["unit_of_measurement"] == "W"
+    assert "opvaskemaskine" not in dev["entities"][0]["name"]  # no registry entry: the name is left out
+    assert info["full"] is False
+    support.d["full"] = True
+    assert support.setup_info()["devices"][0]["entities"][0]["name"] == POWER

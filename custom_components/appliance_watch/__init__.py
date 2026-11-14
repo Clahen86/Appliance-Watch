@@ -34,6 +34,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                       summary=lambda: {"machines": len(hub.machines),
                                        "kinds": sorted({m.kind for m in hub.machines.values()}),
                                        "cycles": sum(len(m.cycles) for m in hub.machines.values())})
+    from .setupinfo import setup_info
+
+    support.setup = lambda: setup_info(hass, hub, support)  # how it is set up, for the developer (names cleaned)
     await support.async_setup()
     hass.bus.async_listen_once("homeassistant_stop", lambda _event: support.unload())
 

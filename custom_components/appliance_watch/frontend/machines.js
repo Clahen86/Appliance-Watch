@@ -205,10 +205,45 @@ export const TEXTS = {
     doneAt: "færdig", left: "tilbage", unknownTime: "Lærer programmet…", emptied: "Tømt", waiting: "Venter på at blive tømt",
     since: "siden", cheap: "Billigst at starte", save: "spar", now: "Nu", program: "Program", noMachines: "Ingen maskiner endnu",
   },
+  de: {
+    kinds: { dishwasher: "Geschirrspüler", washer: "Waschmaschine", dryer: "Trockner", other: "Gerät" },
+    states: { off: "Bereit", running: "Läuft", finishing: "Fast fertig", finished: "Fertig" },
+    doneAt: "fertig um", left: "übrig", unknownTime: "Lernt das Programm…", emptied: "Ausgeräumt", waiting: "Wartet aufs Ausräumen",
+    since: "seit", cheap: "Günstigster Start", save: "spart", now: "Jetzt", program: "Programm", noMachines: "Noch keine Geräte",
+  },
+  sv: {
+    kinds: { dishwasher: "Diskmaskin", washer: "Tvättmaskin", dryer: "Torktumlare", other: "Maskin" },
+    states: { off: "Redo", running: "Kör", finishing: "Nästan klar", finished: "Klar" },
+    doneAt: "klar", left: "kvar", unknownTime: "Lär sig programmet…", emptied: "Tömd", waiting: "Väntar på att tömmas",
+    since: "sedan", cheap: "Billigast att starta", save: "spara", now: "Nu", program: "Program", noMachines: "Inga maskiner än",
+  },
+  nb: {
+    kinds: { dishwasher: "Oppvaskmaskin", washer: "Vaskemaskin", dryer: "Tørketrommel", other: "Maskin" },
+    states: { off: "Klar", running: "Går", finishing: "Nesten ferdig", finished: "Ferdig" },
+    doneAt: "ferdig", left: "igjen", unknownTime: "Lærer programmet…", emptied: "Tømt", waiting: "Venter på å bli tømt",
+    since: "siden", cheap: "Billigst å starte", save: "spar", now: "Nå", program: "Program", noMachines: "Ingen maskiner ennå",
+  },
+  nl: {
+    kinds: { dishwasher: "Vaatwasser", washer: "Wasmachine", dryer: "Droger", other: "Apparaat" },
+    states: { off: "Klaar", running: "Bezig", finishing: "Bijna klaar", finished: "Klaar" },
+    doneAt: "klaar om", left: "te gaan", unknownTime: "Leert het programma…", emptied: "Uitgeruimd", waiting: "Wacht om uitgeruimd te worden",
+    since: "sinds", cheap: "Goedkoopst om te starten", save: "bespaar", now: "Nu", program: "Programma", noMachines: "Nog geen apparaten",
+  },
+  fr: {
+    kinds: { dishwasher: "Lave-vaisselle", washer: "Lave-linge", dryer: "Sèche-linge", other: "Appareil" },
+    states: { off: "Prêt", running: "En marche", finishing: "Presque fini", finished: "Terminé" },
+    doneAt: "terminé à", left: "restant", unknownTime: "Apprend le programme…", emptied: "Vidé", waiting: "Attend d'être vidé",
+    since: "depuis", cheap: "Départ le moins cher", save: "économie", now: "Maintenant", program: "Programme", noMachines: "Pas encore d'appareils",
+  },
 };
 
+// Locale for dates; undefined = the browser's own (as before for English).
+export const LOCALES = { en: undefined, da: "da-DK", de: "de-DE", sv: "sv-SE", nb: "nb-NO", nl: "nl-NL", fr: "fr-FR" };
+
 export function lang(hass) {
-  return (hass?.locale?.language || hass?.language || "en").startsWith("da") ? "da" : "en";
+  let code = String(hass?.locale?.language || hass?.language || "en").toLowerCase().split(/[-_]/)[0];
+  if (code === "no" || code === "nn") code = "nb";
+  return code in TEXTS ? code : "en";
 }
 
 export function clock(iso) {
@@ -229,7 +264,8 @@ export function hm(minutes) {
 export function dur(seconds, L = "en") {
   if (seconds == null) return "";
   const m = Math.round(seconds / 60);
-  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} ${L === "da" ? "t" : "h"}${m % 60 ? ` ${m % 60} min` : ""}`;
+  const h = { da: "t", nb: "t", de: "Std.", nl: "u" }[L] || "h";
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} ${h}${m % 60 ? ` ${m % 60} min` : ""}`;
 }
 
 export function display(m) {
@@ -247,7 +283,7 @@ export function money(value, currency) {
 
 export function num(value, L = "en", digits = 2) {
   const n = Number(value ?? 0).toFixed(digits);
-  return L === "da" ? n.replace(".", ",") : n;
+  return L === "en" ? n : n.replace(".", ","); // every other language here uses a decimal comma
 }
 
 export function esc(s) {

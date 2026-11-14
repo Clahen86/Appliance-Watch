@@ -1,0 +1,143 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Ajouter un appareil",
+        "description": "Choisissez la mesure de puissance de la prise sur laquelle l'appareil est branché. Trouvé pour vous : {found}",
+        "data": {
+          "power_sensor": "Puissance"
+        },
+        "data_description": {
+          "power_sensor": "La puissance d'une prise connectée en W. Tout le reste est appris à partir de là."
+        }
+      },
+      "details": {
+        "title": "À propos de l'appareil",
+        "description": "Deviné à partir de {power} - corrigez ce qui ne va pas.",
+        "data": {
+          "name": "Nom",
+          "kind": "Appareil",
+          "door_sensor": "Capteur de porte (facultatif)",
+          "energy_sensor": "Compteur d'énergie (facultatif)",
+          "switch": "Interrupteur (facultatif)"
+        },
+        "data_description": {
+          "door_sensor": "Porte ouverte = terminé et vidé, tout de suite.",
+          "energy_sensor": "Énergie et prix plus précis par cycle.",
+          "switch": "Éteint = le programme est fini."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Cet appareil est déjà ajouté."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Réglages de l'appareil",
+        "data": {
+          "kind": "Appareil",
+          "door_sensor": "Capteur de porte",
+          "energy_sensor": "Compteur d'énergie",
+          "switch": "Interrupteur"
+        }
+      }
+    }
+  },
+  "selector": {
+    "kind": {
+      "options": {
+        "dishwasher": "Lave-vaisselle",
+        "washer": "Lave-linge",
+        "dryer": "Sèche-linge",
+        "other": "Autre"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "État",
+        "state": {
+          "off": "Arrêt",
+          "running": "En marche",
+          "finishing": "Presque fini",
+          "finished": "Terminé"
+        }
+      },
+      "program": {
+        "name": "Programme"
+      },
+      "finish_time": {
+        "name": "Fin à"
+      },
+      "remaining": {
+        "name": "Temps restant"
+      },
+      "progress": {
+        "name": "Progression"
+      },
+      "last_energy": {
+        "name": "Énergie du dernier cycle"
+      },
+      "last_cost": {
+        "name": "Coût du dernier cycle"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "En marche"
+      },
+      "problem": {
+        "name": "Problème"
+      }
+    },
+    "button": {
+      "emptied": {
+        "name": "Vidé"
+      }
+    }
+  },
+  "issues": {
+    "wear": {
+      "title": "{name} s'use",
+      "description": "{text}"
+    }
+  },
+  "exceptions": {
+    "not_a_machine": {
+      "message": "Cette entité n'est pas un appareil Appliance Watch."
+    },
+    "no_cycle": {
+      "message": "L'appareil n'a pas encore tourné."
+    }
+  },
+  "services": {
+    "set_program": {
+      "name": "Définir le programme",
+      "description": "Indiquez le programme du cycle en cours (ou du dernier) - il en apprend.",
+      "fields": {
+        "entity_id": {
+          "name": "Appareil",
+          "description": "N'importe quelle entité de l'appareil."
+        },
+        "program": {
+          "name": "Programme",
+          "description": "Son nom, ex. Éco 50°."
+        }
+      }
+    },
+    "emptied": {
+      "name": "Vidé",
+      "description": "L'appareil est vidé et prêt pour la prochaine charge.",
+      "fields": {
+        "entity_id": {
+          "name": "Appareil",
+          "description": "N'importe quelle entité de l'appareil."
+        }
+      }
+    }
+  }
+}

@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from .texts import lang
 
 _LOGGER = logging.getLogger(__name__)
-_LANGS = {"da": "Danish", "en": "English"}
+_LANGS = {"da": "Danish", "en": "English", "de": "German", "sv": "Swedish", "nb": "Norwegian Bokmål", "nl": "Dutch", "fr": "French"}
 
 
 async def ask(hass: HomeAssistant, entity_id: str, instructions: str) -> str | None:

@@ -1,5 +1,6 @@
 // Appliance Watch panel: every machine as itself, live; history, programmes, settings.
-import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, machineSVG, minutesLeft, money, num } from "./machines.js";
+import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, LOCALES, machineSVG, minutesLeft, money, num } from "./machines.js";
+import { defineSupport, supportText } from "./support.js";
 
 // Programme names to pick from, per machine - only the ones that fit it.
 const SUGGEST = {
@@ -13,6 +14,36 @@ const SUGGEST = {
     dishwasher: ["Eco 50°", "Auto 45-65°", "Intensive 70°", "Quick 45°", "Pre-rinse", "Glass 40°", "Machine care"],
     washer: ["Cotton 40°", "Cotton 60°", "Eco 40-60", "Colours 30°", "Quick 30°", "Synthetics 40°", "Wool", "Bedding 60°", "Rinse and spin"],
     dryer: ["Cupboard dry", "Extra dry", "Iron dry", "Synthetics", "Wool", "Refresh", "Timed"],
+    other: [],
+  },
+  de: {
+    dishwasher: ["Eco 50°", "Auto 45-65°", "Intensiv 70°", "Kurz 45°", "Vorspülen", "Glas 40°", "Maschinenpflege"],
+    washer: ["Baumwolle 40°", "Baumwolle 60°", "Eco 40-60", "Bunt 30°", "Kurz 30°", "Pflegeleicht 40°", "Wolle", "Bettwäsche 60°", "Spülen und Schleudern"],
+    dryer: ["Schranktrocken", "Extratrocken", "Bügeltrocken", "Pflegeleicht", "Wolle", "Auffrischen", "Zeitprogramm"],
+    other: [],
+  },
+  sv: {
+    dishwasher: ["Eco 50°", "Auto 45-65°", "Intensiv 70°", "Snabb 45°", "Försköljning", "Glas 40°", "Maskinvård"],
+    washer: ["Bomull 40°", "Bomull 60°", "Eco 40-60", "Kulört 30°", "Snabbtvätt 30°", "Syntet 40°", "Ull", "Sängkläder 60°", "Skölj och centrifugering"],
+    dryer: ["Skåptorrt", "Extra torrt", "Stryktorrt", "Syntet", "Ull", "Uppfräschning", "Tidsprogram"],
+    other: [],
+  },
+  nb: {
+    dishwasher: ["Øko 50°", "Auto 45-65°", "Intensiv 70°", "Hurtig 45°", "Skyll", "Glass 40°", "Maskinpleie"],
+    washer: ["Bomull 40°", "Bomull 60°", "Øko 40-60", "Kulørt 30°", "Hurtigvask 30°", "Syntetisk 40°", "Ull", "Sengetøy 60°", "Skyll og sentrifuge"],
+    dryer: ["Skaptørt", "Ekstra tørt", "Stryketørt", "Syntetisk", "Ull", "Oppfriskning", "Tidsprogram"],
+    other: [],
+  },
+  nl: {
+    dishwasher: ["Eco 50°", "Auto 45-65°", "Intensief 70°", "Snel 45°", "Voorspoelen", "Glas 40°", "Machinereiniging"],
+    washer: ["Katoen 40°", "Katoen 60°", "Eco 40-60", "Bonte was 30°", "Snel 30°", "Synthetisch 40°", "Wol", "Beddengoed 60°", "Spoelen en centrifugeren"],
+    dryer: ["Kastdroog", "Extra droog", "Strijkdroog", "Synthetisch", "Wol", "Opfrissen", "Tijdprogramma"],
+    other: [],
+  },
+  fr: {
+    dishwasher: ["Éco 50°", "Auto 45-65°", "Intensif 70°", "Rapide 45°", "Prélavage", "Verres 40°", "Entretien machine"],
+    washer: ["Coton 40°", "Coton 60°", "Éco 40-60", "Couleurs 30°", "Rapide 30°", "Synthétique 40°", "Laine", "Draps 60°", "Rinçage essorage"],
+    dryer: ["Prêt à ranger", "Extra sec", "Prêt à repasser", "Synthétique", "Laine", "Rafraîchir", "Minuterie"],
     other: [],
   },
 };
@@ -82,6 +113,166 @@ const T = {
       dry: "Færdig når tørringen er slut", dryHint: "Fra: færdig så snart arbejdet er slut (den kan stadig tørre stille).",
     },
   },
+  de: {
+    title: "Geräte", settings: "Einstellungen", back: "Zurück", menu: "Menü", saved: "Gespeichert ✓", add: "Gerät hinzufügen",
+    found: "In deinem Zuhause gefunden", addIt: "Hinzufügen", running: "läuft", done: "fertig", ready: "Alles bereit", month: "Diesen Monat",
+    cycles: "Durchläufe", sinceStart: "bisher", last: "Zuletzt", soon: "gleich", min: "Min.", now: "jetzt",
+    today: "Heute", learnHistory: "Aus den letzten 10 Tagen lernen", learned_n: "{n} Durchläufe im Verlauf gefunden",
+    k: {
+      title: "Lautsprecher", hint: "Sagt es laut, damit du nicht aufs Handy schauen musst. Die Musik pausiert und läuft danach weiter.", which: "Sprechen auf",
+      none: "Keine Lautsprecher, die Durchsagen können", say: "Was gesagt wird - tippen zum Ein- und Ausschalten",
+      kinds: { done: ["Fertig", "Der Geschirrspüler ist fertig. Es hat 2,10 gekostet."], soon: ["Fast fertig", "…ist in 10 Minuten fertig."],
+        remind: ["Nicht ausgeräumt", "…wartet seit einer Stunde."], dryer: ["In den Trockner", "Die Wäsche in den Trockner geben."],
+        emptied: ["Ausgeräumt", "Danke! …ist wieder bereit."], started: ["Gestartet", "…ist gegen 22:15 fertig."] },
+      quiet: "Nachts leise", quietHint: "Was nachts fertig wird, wird stattdessen am Morgen gesagt.", from: "Von", to: "Bis",
+      home: "Nur wenn jemand zu Hause ist", homeHint: "Niemand redet mit einem leeren Haus.", voice: "Stimme", defaultVoice: "Standard",
+      test: "Ausprobieren", playing: "Spielt…", noSpeaker: "Wähle zuerst einen Lautsprecher", own: "Lautsprecher für dieses Gerät", asDefault: "Wie unter ⚙️ gewählt",
+    },
+    isDone: "ist fertig", isRunning: "läuft", allReady: "Alle Geräte sind bereit", readySub: "Starte eins - es wird ab der ersten Minute beobachtet.",
+    more: "Mehr", close: "Schließen",
+    which: "Welches Programm war das?", whichNow: "Welches Programm läuft?", own: "Eigener Name…",
+    newProgram: "Neues Programm, z. B. Vorspülen", addProgram: "Hinzufügen", noPrograms: "Noch keine Programme.", whichHint: "Sag es einmal - beim nächsten Mal weiß es das selbst.", other: "Anderes…", name: "Name",
+    ok: "OK", ai: "✨ Vorschlagen", aiExplain: "✨ Erklären", programs: "Programme", history: "Verlauf", noHistory: "Noch keine Durchläufe - starte das Gerät.",
+    usual: "meist", rename: "Umbenennen", merge: "Zusammenführen mit…", forget: "Vergessen", del: "Löschen", changeProgram: "Programm ändern",
+    learned: "gelernt aus", unclear: "Nicht daraus gelernt", reasons: { power_lost: "Strommessung verloren", timeout: "lief zu lange", forced: "von Hand beendet", switch: "ausgeschaltet" },
+    resumed: "Pause gemacht - gelernt", findings: "Gut zu wissen", dismiss: "OK", live: "Live", watts: "W", finishNow: "Es ist fertig",
+    machine: "Dieses Gerät", kind: "Gerät", door: "Türsensor", energy: "Energiezähler", switch: "Schalter", none: "Keiner",
+    s: {
+      phones: "Benachrichtigungen", phonesHint: "Wer eine Nachricht bekommt, wenn ein Gerät fertig ist.", onlyHome: "Nur wer zu Hause ist",
+      onlyHomeHint: "Handys außer Haus bekommen nichts - außer wenn niemand zu Hause ist.", start: "Auch beim Start",
+      remind: "Erinnern, wenn nicht ausgeräumt", off: "Aus", price: "Strompreis", priceHint: "Für den Preis jedes Durchlaufs und die günstigste Startzeit.",
+      cheap: "Günstigeren Start zeigen, wenn er mindestens spart", ai: "KI-Helfer", aiHint: "Benennt Programme und erklärt seltsame Durchläufe. Er misst nie etwas.",
+      dry: "Fertig, wenn das Trocknen vorbei ist", dryHint: "Aus: fertig, sobald die Arbeit vorbei ist (es kann noch leise trocknen).",
+    },
+  },
+  sv: {
+    title: "Maskiner", settings: "Inställningar", back: "Tillbaka", menu: "Meny", saved: "Sparat ✓", add: "Lägg till maskin",
+    found: "Hittad i ditt hem", addIt: "Lägg till", running: "kör", done: "klar", ready: "Allt är klart", month: "Den här månaden",
+    cycles: "körningar", sinceStart: "hittills", last: "Senast", soon: "strax", min: "min", now: "nu",
+    today: "I dag", learnHistory: "Lär från de senaste 10 dagarna", learned_n: "Hittade {n} körningar i historiken",
+    k: {
+      title: "Högtalare", hint: "Den säger det högt, så du inte behöver telefonen. Musiken pausar och kommer tillbaka.", which: "Tala i",
+      none: "Inga högtalare som kan göra utrop", say: "Vad den säger - tryck för att slå på eller av",
+      kinds: { done: ["Klar", "Diskmaskinen är klar. Det kostade 2,10 kr."], soon: ["Snart klar", "…är klar om 10 minuter."],
+        remind: ["Inte tömd", "…har väntat i en timme."], dryer: ["Flytta till torktumlaren", "Flytta tvätten till torktumlaren."],
+        emptied: ["Tömd", "Tack! …är redo igen."], started: ["Startad", "…är klar runt 22:15."] },
+      quiet: "Tyst på natten", quietHint: "Det som blir klart på natten sägs på morgonen i stället.", from: "Från", to: "Till",
+      home: "Bara när någon är hemma", homeHint: "Ingen idé att prata med ett tomt hus.", voice: "Röst", defaultVoice: "Standard",
+      test: "Prova", playing: "Spelar…", noSpeaker: "Välj en högtalare först", own: "Högtalare för den här maskinen", asDefault: "Som valt under ⚙️",
+    },
+    isDone: "är klar", isRunning: "kör", allReady: "Alla maskiner är redo", readySub: "Starta en - den följs från första minuten.",
+    more: "Mer", close: "Stäng",
+    which: "Vilket program var det?", whichNow: "Vilket program kör den?", own: "Eget namn…",
+    newProgram: "Nytt program, t.ex. Försköljning", addProgram: "Lägg till", noPrograms: "Inga program än.", whichHint: "Säg det en gång - nästa gång vet den själv.", other: "Annat…", name: "Namn",
+    ok: "OK", ai: "✨ Föreslå", aiExplain: "✨ Förklara", programs: "Program", history: "Historik", noHistory: "Inga körningar än - starta maskinen.",
+    usual: "vanligen", rename: "Byt namn", merge: "Slå ihop med…", forget: "Glöm", del: "Ta bort", changeProgram: "Byt program",
+    learned: "lärt av", unclear: "Inte lärt av", reasons: { power_lost: "tappade strömmätningen", timeout: "körde för länge", forced: "avslutad för hand", switch: "avstängd" },
+    resumed: "pausade - lärt", findings: "Bra att veta", dismiss: "OK", live: "Live", watts: "W", finishNow: "Den är klar",
+    machine: "Den här maskinen", kind: "Maskin", door: "Dörrsensor", energy: "Energimätare", switch: "Brytare", none: "Ingen",
+    s: {
+      phones: "Aviseringar", phonesHint: "Vem som får ett meddelande när en maskin är klar.", onlyHome: "Bara de som är hemma",
+      onlyHomeHint: "Telefoner som är borta får inget - om inte ingen är hemma.", start: "Även när den startar",
+      remind: "Påminn om den inte är tömd", off: "Av", price: "Elpris", priceHint: "För priset på varje körning och billigaste tid att starta.",
+      cheap: "Visa billigare start när den sparar minst", ai: "AI-hjälpare", aiHint: "Namnger program och förklarar konstiga körningar. Den mäter aldrig något.",
+      dry: "Klar när torkningen är slut", dryHint: "Av: klar så fort arbetet är slut (den kan fortfarande torka tyst).",
+    },
+  },
+  nb: {
+    title: "Maskiner", settings: "Innstillinger", back: "Tilbake", menu: "Meny", saved: "Lagret ✓", add: "Legg til maskin",
+    found: "Funnet i hjemmet ditt", addIt: "Legg til", running: "går", done: "ferdig", ready: "Alt er klart", month: "Denne måneden",
+    cycles: "vask", sinceStart: "så langt", last: "Sist", soon: "om litt", min: "min", now: "nå",
+    today: "I dag", learnHistory: "Lær fra de siste 10 dagene", learned_n: "Fant {n} vask i historikken",
+    k: {
+      title: "Høyttalere", hint: "Den sier det høyt, så du ikke trenger telefonen. Musikken tar pause og kommer tilbake.", which: "Snakk i",
+      none: "Ingen høyttalere som kan annonsere", say: "Det den sier - trykk for å slå av og på",
+      kinds: { done: ["Ferdig", "Oppvaskmaskinen er ferdig. Det kostet 2,10 kr."], soon: ["Snart ferdig", "…er ferdig om 10 minutter."],
+        remind: ["Ikke tømt", "…har ventet i en time."], dryer: ["Flytt til tørketrommelen", "Flytt klærne over i tørketrommelen."],
+        emptied: ["Tømt", "Takk! …er klar igjen."], started: ["Startet", "…er ferdig rundt 22:15."] },
+      quiet: "Stille om natten", quietHint: "Det som blir ferdig om natten, sies om morgenen i stedet.", from: "Fra", to: "Til",
+      home: "Bare når noen er hjemme", homeHint: "Ingen vits å snakke til et tomt hus.", voice: "Stemme", defaultVoice: "Standard",
+      test: "Prøv", playing: "Spiller…", noSpeaker: "Velg en høyttaler først", own: "Høyttaler for denne maskinen", asDefault: "Som valgt under ⚙️",
+    },
+    isDone: "er ferdig", isRunning: "går", allReady: "Alle maskiner er klare", readySub: "Start en - den følges fra første minutt.",
+    more: "Mer", close: "Lukk",
+    which: "Hvilket program var det?", whichNow: "Hvilket program går?", own: "Eget navn…",
+    newProgram: "Nytt program, f.eks. Skyll", addProgram: "Legg til", noPrograms: "Ingen programmer ennå.", whichHint: "Si det én gang - neste gang vet den det selv.", other: "Annet…", name: "Navn",
+    ok: "OK", ai: "✨ Foreslå", aiExplain: "✨ Forklar", programs: "Programmer", history: "Historikk", noHistory: "Ingen vask ennå - start maskinen.",
+    usual: "vanligvis", rename: "Gi nytt navn", merge: "Slå sammen med…", forget: "Glem", del: "Slett", changeProgram: "Bytt program",
+    learned: "lært av", unclear: "Ikke lært av", reasons: { power_lost: "mistet strømmålingen", timeout: "gikk for lenge", forced: "avsluttet for hånd", switch: "slått av" },
+    resumed: "tok pause - lært", findings: "Greit å vite", dismiss: "OK", live: "Live", watts: "W", finishNow: "Den er ferdig",
+    machine: "Denne maskinen", kind: "Maskin", door: "Dørsensor", energy: "Energimåler", switch: "Bryter", none: "Ingen",
+    s: {
+      phones: "Varsler", phonesHint: "Hvem som får beskjed når en maskin er ferdig.", onlyHome: "Bare de som er hjemme",
+      onlyHomeHint: "Telefoner utenfor huset får ingenting - med mindre ingen er hjemme.", start: "Også når den starter",
+      remind: "Påminn hvis ikke tømt", off: "Av", price: "Strømpris", priceHint: "For prisen på hver vask og det billigste tidspunktet å starte.",
+      cheap: "Vis billigere start når den sparer minst", ai: "AI-hjelper", aiHint: "Navngir programmer og forklarer rare vask. Den måler aldri noe.",
+      dry: "Ferdig når tørkingen er over", dryHint: "Av: ferdig så snart arbeidet er over (den kan fortsatt tørke stille).",
+    },
+  },
+  nl: {
+    title: "Apparaten", settings: "Instellingen", back: "Terug", menu: "Menu", saved: "Opgeslagen ✓", add: "Apparaat toevoegen",
+    found: "Gevonden in je huis", addIt: "Toevoegen", running: "bezig", done: "klaar", ready: "Alles klaar", month: "Deze maand",
+    cycles: "keer", sinceStart: "tot nu toe", last: "Laatst", soon: "zo klaar", min: "min", now: "nu",
+    today: "Vandaag", learnHistory: "Leer van de laatste 10 dagen", learned_n: "{n} keer gevonden in de geschiedenis",
+    k: {
+      title: "Speakers", hint: "Zegt het hardop, zodat je je telefoon niet nodig hebt. De muziek pauzeert en gaat daarna verder.", which: "Spreek op",
+      none: "Geen speakers die iets kunnen omroepen", say: "Wat er gezegd wordt - tik om aan of uit te zetten",
+      kinds: { done: ["Klaar", "De vaatwasser is klaar. Het kostte 2,10."], soon: ["Bijna klaar", "…is over 10 minuten klaar."],
+        remind: ["Niet uitgeruimd", "…wacht al een uur."], dryer: ["Naar de droger", "Doe de was in de droger."],
+        emptied: ["Uitgeruimd", "Dank je! …is weer klaar voor gebruik."], started: ["Gestart", "…is rond 22:15 klaar."] },
+      quiet: "Stil 's nachts", quietHint: "Wat 's nachts klaar is, wordt in plaats daarvan 's ochtends gezegd.", from: "Van", to: "Tot",
+      home: "Alleen als er iemand thuis is", homeHint: "Niemand praat tegen een leeg huis.", voice: "Stem", defaultVoice: "Standaard",
+      test: "Probeer", playing: "Speelt af…", noSpeaker: "Kies eerst een speaker", own: "Speaker voor dit apparaat", asDefault: "Zoals gekozen bij ⚙️",
+    },
+    isDone: "is klaar", isRunning: "is bezig", allReady: "Alle apparaten zijn klaar", readySub: "Start er een - hij wordt vanaf de eerste minuut gevolgd.",
+    more: "Meer", close: "Sluiten",
+    which: "Welk programma was het?", whichNow: "Welk programma draait er?", own: "Eigen naam…",
+    newProgram: "Nieuw programma, bijv. Voorspoelen", addProgram: "Toevoegen", noPrograms: "Nog geen programma's.", whichHint: "Zeg het één keer - de volgende keer weet hij het zelf.", other: "Anders…", name: "Naam",
+    ok: "OK", ai: "✨ Voorstellen", aiExplain: "✨ Uitleggen", programs: "Programma's", history: "Geschiedenis", noHistory: "Nog niets gedraaid - start het apparaat.",
+    usual: "meestal", rename: "Hernoemen", merge: "Samenvoegen met…", forget: "Vergeten", del: "Verwijderen", changeProgram: "Programma wijzigen",
+    learned: "geleerd van", unclear: "Niet van geleerd", reasons: { power_lost: "stroommeting kwijt", timeout: "duurde te lang", forced: "met de hand beëindigd", switch: "uitgezet" },
+    resumed: "pauze gehad - geleerd", findings: "Goed om te weten", dismiss: "OK", live: "Live", watts: "W", finishNow: "Hij is klaar",
+    machine: "Dit apparaat", kind: "Apparaat", door: "Deursensor", energy: "Energiemeter", switch: "Schakelaar", none: "Geen",
+    s: {
+      phones: "Meldingen", phonesHint: "Wie een bericht krijgt als een apparaat klaar is.", onlyHome: "Alleen wie thuis is",
+      onlyHomeHint: "Telefoons buitenshuis krijgen niets - tenzij er niemand thuis is.", start: "Ook bij het starten",
+      remind: "Herinneren als niet uitgeruimd", off: "Uit", price: "Stroomprijs", priceHint: "Voor de prijs van elke keer en het goedkoopste moment om te starten.",
+      cheap: "Goedkopere start tonen als die minstens bespaart", ai: "AI-hulp", aiHint: "Geeft programma's een naam en legt vreemde keren uit. Meet zelf nooit iets.",
+      dry: "Klaar als het drogen voorbij is", dryHint: "Uit: klaar zodra het werk voorbij is (hij kan nog stil nadrogen).",
+    },
+  },
+  fr: {
+    title: "Appareils", settings: "Réglages", back: "Retour", menu: "Menu", saved: "Enregistré ✓", add: "Ajouter un appareil",
+    found: "Trouvé chez vous", addIt: "Ajouter", running: "en marche", done: "terminé", ready: "Tout est prêt", month: "Ce mois-ci",
+    cycles: "cycles", sinceStart: "jusqu'ici", last: "Dernier", soon: "d'une minute à l'autre", min: "min", now: "maintenant",
+    today: "Aujourd'hui", learnHistory: "Apprendre des 10 derniers jours", learned_n: "{n} cycles trouvés dans l'historique",
+    k: {
+      title: "Enceintes", hint: "Il le dit à voix haute, pas besoin du téléphone. La musique se met en pause puis reprend.", which: "Parler sur",
+      none: "Aucune enceinte capable de faire des annonces", say: "Ce qu'il dit - touchez pour activer ou désactiver",
+      kinds: { done: ["Terminé", "Le lave-vaisselle est terminé. Ça a coûté 2,10."], soon: ["Bientôt terminé", "…sera terminé dans 10 minutes."],
+        remind: ["Pas vidé", "…attend depuis une heure."], dryer: ["Au sèche-linge", "Mettez le linge dans le sèche-linge."],
+        emptied: ["Vidé", "Merci ! …est de nouveau prêt."], started: ["Démarré", "…sera terminé vers 22:15."] },
+      quiet: "Silence la nuit", quietHint: "Ce qui se termine la nuit est annoncé le matin à la place.", from: "De", to: "À",
+      home: "Seulement si quelqu'un est là", homeHint: "Inutile de parler à une maison vide.", voice: "Voix", defaultVoice: "Standard",
+      test: "Essayer", playing: "Lecture…", noSpeaker: "Choisissez d'abord une enceinte", own: "Enceinte pour cet appareil", asDefault: "Comme choisi dans ⚙️",
+    },
+    isDone: "est terminé", isRunning: "est en marche", allReady: "Tous les appareils sont prêts", readySub: "Lancez-en un - il est suivi dès la première minute.",
+    more: "Plus", close: "Fermer",
+    which: "C'était quel programme ?", whichNow: "Quel programme est en cours ?", own: "Votre propre nom…",
+    newProgram: "Nouveau programme, ex. Prélavage", addProgram: "Ajouter", noPrograms: "Pas encore de programmes.", whichHint: "Dites-le une fois - la prochaine fois, il le saura tout seul.", other: "Autre…", name: "Nom",
+    ok: "OK", ai: "✨ Suggérer", aiExplain: "✨ Expliquer", programs: "Programmes", history: "Historique", noHistory: "Pas encore de cycles - lancez l'appareil.",
+    usual: "d'habitude", rename: "Renommer", merge: "Fusionner avec…", forget: "Oublier", del: "Supprimer", changeProgram: "Changer de programme",
+    learned: "appris de", unclear: "Rien appris de", reasons: { power_lost: "mesure de puissance perdue", timeout: "a duré trop longtemps", forced: "arrêté à la main", switch: "éteint" },
+    resumed: "en pause - appris", findings: "Bon à savoir", dismiss: "OK", live: "En direct", watts: "W", finishNow: "C'est terminé",
+    machine: "Cet appareil", kind: "Appareil", door: "Capteur de porte", energy: "Compteur d'énergie", switch: "Interrupteur", none: "Aucun",
+    s: {
+      phones: "Notifications", phonesHint: "Qui reçoit un message quand un appareil a terminé.", onlyHome: "Seulement ceux qui sont là",
+      onlyHomeHint: "Les téléphones hors de la maison ne reçoivent rien - sauf si personne n'est là.", start: "Aussi au démarrage",
+      remind: "Rappeler si pas vidé", off: "Désactivé", price: "Prix de l'électricité", priceHint: "Pour le prix de chaque cycle et le meilleur moment pour démarrer.",
+      cheap: "Proposer un départ moins cher s'il économise au moins", ai: "Assistant IA", aiHint: "Nomme les programmes et explique les cycles bizarres. Il ne mesure jamais rien.",
+      dry: "Terminé quand le séchage est fini", dryHint: "Désactivé : terminé dès que le travail est fini (il peut encore sécher en silence).",
+    },
+  },
 };
 
 class ApplianceWatchPanel extends HTMLElement {
@@ -96,6 +287,7 @@ class ApplianceWatchPanel extends HTMLElement {
   set hass(hass) {
     const first = !this._hass;
     this._hass = hass;
+    if (this._sup) this._sup.hass = hass;
     if (first) this._connect();
   }
   set narrow(v) { this._narrow = v; }
@@ -181,7 +373,8 @@ class ApplianceWatchPanel extends HTMLElement {
     const typed = Object.fromEntries([...r.querySelectorAll("input[data-keep]")].filter((i) => i.value).map((i) => [i.dataset.keep, i.value]));
     const focus = r.activeElement?.dataset?.keep;
     const y = window.scrollY;
-    const v = this._view === "settings" ? this._settingsView() : this._view === "machine" ? this._machineView() : this._listView();
+    const v = this._view === "support" ? `${this._bar(supportText(this._hass, "help"), true)}<main id="support-slot"></main>`
+      : this._view === "settings" ? this._settingsView() : this._view === "machine" ? this._machineView() : this._listView();
     r.innerHTML = `${this._css()}<style>${MACHINE_CSS}</style>${v}<div id="sheetbox"></div><div class="toast"></div>`;
     this._sheetOpen = null;
     r.querySelectorAll("details[data-key]").forEach((d) => open.has(d.dataset.key) && (d.open = true));
@@ -189,6 +382,12 @@ class ApplianceWatchPanel extends HTMLElement {
     if (focus) r.querySelector(`input[data-keep="${focus}"]`)?.focus();
     if (this._view === this._lastView) window.scrollTo(0, y);
     this._lastView = this._view;
+    const slot = r.getElementById("support-slot");
+    if (slot) {  // one element kept between draws, so a half-written message isn't lost
+      this._sup = this._sup || document.createElement(defineSupport("appliance_watch"));
+      this._sup.hass = this._hass;
+      slot.appendChild(this._sup);
+    }
     this._wire();
     if (this._view === "list") this._countUp();
   }
@@ -199,6 +398,7 @@ class ApplianceWatchPanel extends HTMLElement {
       ${back ? `<button class="icon" data-act="back" title="${t.back}">←</button>` : this._narrow ? `<button class="icon" data-act="menu" title="${t.menu}">☰</button>` : ""}
       <h1>${title}</h1>
       ${!back && this._admin && this._view === "list" ? `<button class="icon plus" data-act="addflow" title="${t.add}">+</button>` : ""}
+      ${!back && this._admin ? `<button class="icon help" data-act="help" title="${esc(supportText(this._hass, "help"))}">🛟</button>` : ""}
       ${!back && this._admin ? `<button class="icon" data-act="settings" title="${t.settings}">⚙️</button>` : ""}
     </div>`;
   }
@@ -224,7 +424,7 @@ class ApplianceWatchPanel extends HTMLElement {
 
   _headline() {
     const t = this.t, w = this.w, ms = this._machines;
-    const d = new Date().toLocaleDateString(this.L === "da" ? "da-DK" : undefined, { weekday: "long", day: "numeric", month: "long" });
+    const d = new Date().toLocaleDateString(LOCALES[this.L], { weekday: "long", day: "numeric", month: "long" });
     const today = d.charAt(0).toUpperCase() + d.slice(1);
     const fin = ms.find((m) => m.state === "finished");
     if (fin) return { kicker: today, title: `${esc(fin.name)} ${t.isDone}`, sub: w.waiting, color: "#22c55e", m: fin };
@@ -374,7 +574,7 @@ class ApplianceWatchPanel extends HTMLElement {
     const named = f.programs.filter((p) => p.named);
     const have = new Set(named.map((p) => p.name.toLowerCase()));
     const ideas = (SUGGEST[this.L][m.kind] || []).filter((n) => !have.has(n.toLowerCase()));
-    const when = active ? "" : ` (${new Date(c.start).toLocaleString(this.L === "da" ? "da-DK" : undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })}, ${dur(c.duration, this.L)})`;
+    const when = active ? "" : ` (${new Date(c.start).toLocaleString(LOCALES[this.L], { weekday: "short", hour: "2-digit", minute: "2-digit" })}, ${dur(c.duration, this.L)})`;
     return `<section class="card ask"><h3>🏷️ ${active ? t.whichNow : t.which}</h3><div class="muted">${t.whichHint}${when}</div>
       <div class="chips pick">${named.map((p) => `<button class="chip btn ${p.id === c.program_id ? "on" : ""}" data-act="label" data-cycle="${c.id}" data-program="${p.id}">${esc(p.name)}</button>`).join("")}
         ${ideas.map((n) => `<button class="chip btn idea" data-act="labelname" data-cycle="${c.id}" data-name="${esc(n)}">${esc(n)}</button>`).join("")}</div>
@@ -398,7 +598,7 @@ class ApplianceWatchPanel extends HTMLElement {
   _history(f, m) {
     const t = this.t;
     const rows = (f.history || []).map((c) => {
-      const when = new Date(c.start).toLocaleString(this.L === "da" ? "da-DK" : undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      const when = new Date(c.start).toLocaleString(LOCALES[this.L], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
       const flags = [c.resumed ? `<span class="tag">⏸ ${t.resumed}</span>` : "", c.clean === false ? `<span class="tag grey">${t.unclear}: ${t.reasons[c.reason] || c.reason}</span>` : ""].join("");
       return `<div class="hist"><div class="spark">${this._chart(c.curve, m.kind, 28, true)}</div>
         <div class="hmain"><b>${esc(c.program || "–")}</b> <span class="muted">${when}</span><div class="muted">${dur(c.duration, this.L)} · ${num(c.kwh, this.L)} kWh${c.cost != null ? " · " + money(c.cost, m.currency) : ""} ${flags}</div></div>
@@ -475,7 +675,7 @@ class ApplianceWatchPanel extends HTMLElement {
     } else {
       const c = f.history.find((x) => x.id === id);
       if (!c) return;
-      title = `${esc(c.program || "–")} · ${new Date(c.start).toLocaleString(this.L === "da" ? "da-DK" : undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })}`;
+      title = `${esc(c.program || "–")} · ${new Date(c.start).toLocaleString(LOCALES[this.L], { weekday: "short", hour: "2-digit", minute: "2-digit" })}`;
       const named = f.programs.filter((p) => p.named), have = new Set(named.map((p) => p.name.toLowerCase()));
       const ideas = (SUGGEST[this.L][m.kind] || []).filter((n) => !have.has(n.toLowerCase()));
       body = `<div class="lbl">${t.changeProgram}</div><div class="chips">
@@ -598,6 +798,7 @@ class ApplianceWatchPanel extends HTMLElement {
     switch (act) {
       case "menu": return this.dispatchEvent(new Event("hass-toggle-menu", { bubbles: true, composed: true }));
       case "back": this._view = "list"; return this._render();
+      case "help": this._view = "support"; return this._render();
       case "settings":
         this._view = "settings";
         this._render();

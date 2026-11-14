@@ -41,7 +41,7 @@ _LOGGER = logging.getLogger(__name__)
 STATIC = "/appliance_watch_static"
 PANEL = "appliance-watch"
 SIGNAL_ALL = f"{DOMAIN}_all"
-_TITLES = {"da": "Maskiner", "de": "Geräte", "sv": "Maskiner", "nb": "Maskiner"}
+_TITLES = {"da": "Maskiner", "de": "Geräte", "sv": "Maskiner", "nb": "Maskiner", "nl": "Apparaten", "fr": "Appareils"}
 SENTENCES = [
     "hvornår er {maskine} færdig",
     "hvornår bliver {maskine} færdig",

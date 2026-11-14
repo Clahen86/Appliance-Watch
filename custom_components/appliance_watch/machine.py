@@ -638,6 +638,21 @@ class Machine:
 
     # ---------- for the panel and the card ----------
 
+    def typical(self) -> dict[str, Any] | None:
+        """What a usual run takes: the programme run most often of the last 20 clean cycles - its median minutes and kWh.
+        Energy Pilot reads it (the status sensor's attributes) to start the machine at the cheapest time."""
+        from statistics import median
+
+        done = [c for c in self.cycles if c.get("end") and c.get("wh") and c.get("clean", True)][-20:]
+        if len(done) < 3:
+            return None
+        progs = [c.get("program") for c in done if c.get("program")]
+        prog = max(set(progs), key=progs.count) if progs else None
+        runs = [c for c in done if c.get("program") == prog] if prog and progs.count(prog) >= 3 else done
+        return {"program": self.program_name(prog) if prog else None, "n": len(runs),
+                "minutes": round(median((c["end"] - c["start"]) / 60 for c in runs)),
+                "kwh": round(median(c["wh"] / 1000 for c in runs), 2)}
+
     def snapshot(self, full: bool = False, language: str | None = None) -> dict[str, Any]:
         c = self.live
         last = self.cycles[-1] if self.cycles else None

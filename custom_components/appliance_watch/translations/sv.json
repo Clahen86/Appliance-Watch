@@ -1,0 +1,143 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Lägg till en maskin",
+        "description": "Välj effektmätningen från uttaget som maskinen sitter i. Hittade åt dig: {found}",
+        "data": {
+          "power_sensor": "Effekt"
+        },
+        "data_description": {
+          "power_sensor": "Effekten från ett smart uttag i W. Allt annat lärs in från den."
+        }
+      },
+      "details": {
+        "title": "Om maskinen",
+        "description": "Gissat utifrån {power} - ändra det som är fel.",
+        "data": {
+          "name": "Namn",
+          "kind": "Maskin",
+          "door_sensor": "Dörrsensor (valfri)",
+          "energy_sensor": "Energimätare (valfri)",
+          "switch": "Brytare (valfri)"
+        },
+        "data_description": {
+          "door_sensor": "Dörren öppnas = klar och tömd, direkt.",
+          "energy_sensor": "Mer exakt energi och pris per körning.",
+          "switch": "Avstängd = programmet är slut."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Den här maskinen är redan tillagd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Maskininställningar",
+        "data": {
+          "kind": "Maskin",
+          "door_sensor": "Dörrsensor",
+          "energy_sensor": "Energimätare",
+          "switch": "Brytare"
+        }
+      }
+    }
+  },
+  "selector": {
+    "kind": {
+      "options": {
+        "dishwasher": "Diskmaskin",
+        "washer": "Tvättmaskin",
+        "dryer": "Torktumlare",
+        "other": "Annat"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Av",
+          "running": "Kör",
+          "finishing": "Nästan klar",
+          "finished": "Klar"
+        }
+      },
+      "program": {
+        "name": "Program"
+      },
+      "finish_time": {
+        "name": "Klar kl."
+      },
+      "remaining": {
+        "name": "Tid kvar"
+      },
+      "progress": {
+        "name": "Förlopp"
+      },
+      "last_energy": {
+        "name": "Energi senaste körning"
+      },
+      "last_cost": {
+        "name": "Kostnad senaste körning"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Kör"
+      },
+      "problem": {
+        "name": "Problem"
+      }
+    },
+    "button": {
+      "emptied": {
+        "name": "Tömd"
+      }
+    }
+  },
+  "issues": {
+    "wear": {
+      "title": "{name} slits",
+      "description": "{text}"
+    }
+  },
+  "exceptions": {
+    "not_a_machine": {
+      "message": "Den entiteten är inte en Appliance Watch-maskin."
+    },
+    "no_cycle": {
+      "message": "Maskinen har inte kört än."
+    }
+  },
+  "services": {
+    "set_program": {
+      "name": "Ange program",
+      "description": "Ange vilket program den pågående (eller senaste) körningen är - den lär sig av det.",
+      "fields": {
+        "entity_id": {
+          "name": "Maskin",
+          "description": "Valfri entitet för maskinen."
+        },
+        "program": {
+          "name": "Program",
+          "description": "Dess namn, t.ex. Eco 50°."
+        }
+      }
+    },
+    "emptied": {
+      "name": "Tömd",
+      "description": "Maskinen är tömd och redo för nästa omgång.",
+      "fields": {
+        "entity_id": {
+          "name": "Maskin",
+          "description": "Valfri entitet för maskinen."
+        }
+      }
+    }
+  }
+}

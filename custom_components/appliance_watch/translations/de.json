@@ -1,0 +1,143 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Gerät hinzufügen",
+        "description": "Wähle die Leistungsmessung der Steckdose, an der das Gerät hängt. Für dich gefunden: {found}",
+        "data": {
+          "power_sensor": "Leistung"
+        },
+        "data_description": {
+          "power_sensor": "Die Leistung einer smarten Steckdose in W. Alles andere wird daraus gelernt."
+        }
+      },
+      "details": {
+        "title": "Über das Gerät",
+        "description": "Geschätzt aus {power} - ändere, was nicht stimmt.",
+        "data": {
+          "name": "Name",
+          "kind": "Gerät",
+          "door_sensor": "Türsensor (optional)",
+          "energy_sensor": "Energiezähler (optional)",
+          "switch": "Schalter (optional)"
+        },
+        "data_description": {
+          "door_sensor": "Tür auf = sofort fertig und ausgeräumt.",
+          "energy_sensor": "Genauere Energie und genauerer Preis pro Durchlauf.",
+          "switch": "Ausgeschaltet = das Programm ist zu Ende."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Dieses Gerät ist schon hinzugefügt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Geräteeinstellungen",
+        "data": {
+          "kind": "Gerät",
+          "door_sensor": "Türsensor",
+          "energy_sensor": "Energiezähler",
+          "switch": "Schalter"
+        }
+      }
+    }
+  },
+  "selector": {
+    "kind": {
+      "options": {
+        "dishwasher": "Geschirrspüler",
+        "washer": "Waschmaschine",
+        "dryer": "Trockner",
+        "other": "Anderes"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Aus",
+          "running": "Läuft",
+          "finishing": "Fast fertig",
+          "finished": "Fertig"
+        }
+      },
+      "program": {
+        "name": "Programm"
+      },
+      "finish_time": {
+        "name": "Fertig um"
+      },
+      "remaining": {
+        "name": "Restzeit"
+      },
+      "progress": {
+        "name": "Fortschritt"
+      },
+      "last_energy": {
+        "name": "Energie letzter Durchlauf"
+      },
+      "last_cost": {
+        "name": "Kosten letzter Durchlauf"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Läuft"
+      },
+      "problem": {
+        "name": "Problem"
+      }
+    },
+    "button": {
+      "emptied": {
+        "name": "Ausgeräumt"
+      }
+    }
+  },
+  "issues": {
+    "wear": {
+      "title": "{name} nutzt sich ab",
+      "description": "{text}"
+    }
+  },
+  "exceptions": {
+    "not_a_machine": {
+      "message": "Diese Entität ist kein Appliance-Watch-Gerät."
+    },
+    "no_cycle": {
+      "message": "Das Gerät ist noch nicht gelaufen."
+    }
+  },
+  "services": {
+    "set_program": {
+      "name": "Programm festlegen",
+      "description": "Sag, welches Programm der laufende (oder letzte) Durchlauf ist - daraus wird gelernt.",
+      "fields": {
+        "entity_id": {
+          "name": "Gerät",
+          "description": "Eine beliebige Entität des Geräts."
+        },
+        "program": {
+          "name": "Programm",
+          "description": "Sein Name, z. B. Eco 50°."
+        }
+      }
+    },
+    "emptied": {
+      "name": "Ausgeräumt",
+      "description": "Das Gerät ist ausgeräumt und bereit für die nächste Ladung.",
+      "fields": {
+        "entity_id": {
+          "name": "Gerät",
+          "description": "Eine beliebige Entität des Geräts."
+        }
+      }
+    }
+  }
+}

@@ -150,6 +150,16 @@ const CSS = `
   @media (prefers-reduced-motion: reduce) { .m { animation:none !important; } }
 `;
 
+const EDITOR = {
+  en: { entity: "Machine (empty = all)", title: "Title", layout: "Layout", auto: "Automatic", tiles: "Tiles" },
+  da: { entity: "Maskine (tom = alle)", title: "Titel", layout: "Visning", auto: "Automatisk", tiles: "Fliser" },
+  de: { entity: "Gerät (leer = alle)", title: "Titel", layout: "Ansicht", auto: "Automatisch", tiles: "Kacheln" },
+  sv: { entity: "Maskin (tom = alla)", title: "Titel", layout: "Visning", auto: "Automatisk", tiles: "Rutor" },
+  nb: { entity: "Maskin (tom = alle)", title: "Tittel", layout: "Visning", auto: "Automatisk", tiles: "Fliser" },
+  nl: { entity: "Apparaat (leeg = alle)", title: "Titel", layout: "Weergave", auto: "Automatisch", tiles: "Tegels" },
+  fr: { entity: "Appareil (vide = tous)", title: "Titre", layout: "Affichage", auto: "Automatique", tiles: "Tuiles" },
+};
+
 class ApplianceWatchCardEditor extends HTMLElement {
   setConfig(config) { this._config = config || {}; this._render(); }
   set hass(hass) { this._hass = hass; this._render(); }
@@ -158,11 +168,7 @@ class ApplianceWatchCardEditor extends HTMLElement {
     const L = lang(this._hass);
     if (!this._form) {
       this._form = document.createElement("ha-form");
-      this._form.computeLabel = (s) => ({
-        entity: L === "da" ? "Maskine (tom = alle)" : "Machine (empty = all)",
-        title: L === "da" ? "Titel" : "Title",
-        layout: L === "da" ? "Visning" : "Layout",
-      })[s.name];
+      this._form.computeLabel = (s) => (EDITOR[L] || EDITOR.en)[s.name];
       this._form.addEventListener("value-changed", (e) => {
         const config = { ...e.detail.value };
         Object.keys(config).forEach((k) => (config[k] === "" || config[k] == null) && delete config[k]);
@@ -178,7 +184,7 @@ class ApplianceWatchCardEditor extends HTMLElement {
       { name: "entity", selector: { entity: { include_entities: ids } } },
       { name: "title", selector: { text: {} } },
       { name: "layout", selector: { select: { mode: "dropdown", options: [
-        { value: "auto", label: L === "da" ? "Automatisk" : "Automatic" }, { value: "tiles", label: L === "da" ? "Fliser" : "Tiles" }] } } },
+        { value: "auto", label: (EDITOR[L] || EDITOR.en).auto }, { value: "tiles", label: (EDITOR[L] || EDITOR.en).tiles }] } } },
     ];
   }
 }

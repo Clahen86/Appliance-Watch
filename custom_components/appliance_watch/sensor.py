@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import STATES
+from .const import CONF_POWER, STATES
 from .entity import MachineEntity
 
 
@@ -36,6 +36,8 @@ class StatusSensor(MachineEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         s = self.machine.snapshot()
+        s["power_sensor"] = (s.get("devices") or {}).get(CONF_POWER)  # so Energy Pilot finds the same machine
+        s["typical"] = self.machine.typical()
         last = s.pop("last")
         for key in ("devices", "state", "live_id", "spark", "today"):
             s.pop(key, None)

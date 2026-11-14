@@ -1,0 +1,143 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Apparaat toevoegen",
+        "description": "Kies de vermogensmeting van de stekker waar het apparaat aan hangt. Voor je gevonden: {found}",
+        "data": {
+          "power_sensor": "Vermogen"
+        },
+        "data_description": {
+          "power_sensor": "Het vermogen van een slimme stekker in W. De rest wordt daaruit geleerd."
+        }
+      },
+      "details": {
+        "title": "Over het apparaat",
+        "description": "Geschat op basis van {power} - pas aan wat niet klopt.",
+        "data": {
+          "name": "Naam",
+          "kind": "Apparaat",
+          "door_sensor": "Deursensor (optioneel)",
+          "energy_sensor": "Energiemeter (optioneel)",
+          "switch": "Schakelaar (optioneel)"
+        },
+        "data_description": {
+          "door_sensor": "Deur open = meteen klaar en uitgeruimd.",
+          "energy_sensor": "Preciezere energie en prijs per keer.",
+          "switch": "Uitgezet = het programma is afgelopen."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Dit apparaat is al toegevoegd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Apparaatinstellingen",
+        "data": {
+          "kind": "Apparaat",
+          "door_sensor": "Deursensor",
+          "energy_sensor": "Energiemeter",
+          "switch": "Schakelaar"
+        }
+      }
+    }
+  },
+  "selector": {
+    "kind": {
+      "options": {
+        "dishwasher": "Vaatwasser",
+        "washer": "Wasmachine",
+        "dryer": "Droger",
+        "other": "Anders"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "off": "Uit",
+          "running": "Bezig",
+          "finishing": "Bijna klaar",
+          "finished": "Klaar"
+        }
+      },
+      "program": {
+        "name": "Programma"
+      },
+      "finish_time": {
+        "name": "Klaar om"
+      },
+      "remaining": {
+        "name": "Resterende tijd"
+      },
+      "progress": {
+        "name": "Voortgang"
+      },
+      "last_energy": {
+        "name": "Energie laatste keer"
+      },
+      "last_cost": {
+        "name": "Kosten laatste keer"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Bezig"
+      },
+      "problem": {
+        "name": "Probleem"
+      }
+    },
+    "button": {
+      "emptied": {
+        "name": "Uitgeruimd"
+      }
+    }
+  },
+  "issues": {
+    "wear": {
+      "title": "{name} slijt",
+      "description": "{text}"
+    }
+  },
+  "exceptions": {
+    "not_a_machine": {
+      "message": "Die entiteit is geen Appliance Watch-apparaat."
+    },
+    "no_cycle": {
+      "message": "Het apparaat heeft nog niet gedraaid."
+    }
+  },
+  "services": {
+    "set_program": {
+      "name": "Programma instellen",
+      "description": "Geef aan welk programma de huidige (of laatste) keer is - daar wordt van geleerd.",
+      "fields": {
+        "entity_id": {
+          "name": "Apparaat",
+          "description": "Een willekeurige entiteit van het apparaat."
+        },
+        "program": {
+          "name": "Programma",
+          "description": "De naam, bijv. Eco 50°."
+        }
+      }
+    },
+    "emptied": {
+      "name": "Uitgeruimd",
+      "description": "Het apparaat is uitgeruimd en klaar voor de volgende lading.",
+      "fields": {
+        "entity_id": {
+          "name": "Apparaat",
+          "description": "Een willekeurige entiteit van het apparaat."
+        }
+      }
+    }
+  }
+}

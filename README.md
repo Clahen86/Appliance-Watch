@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Languages** | English and Danish (panel, card, notifications, speakers, Assist). Other languages show English. |
+| **Languages** | English, Danish, German, Swedish, Norwegian, Dutch and French (panel, card, notifications, speakers, Assist). |
 | **Currency** | Any – taken from your price sensor's unit (kr, €, £, $ …). Works with Strømligning, Nord Pool, Energi Data Service, Tibber and other price sensors. No price sensor? Everything works, just without costs. |
 | **Machines** | Dishwasher, washing machine and dryer – any brand, via a smart plug that measures power (W). |
 
@@ -36,6 +36,8 @@ no motor) and the machine has only rested longer than its own programme ever pau
 - **Assist** – "when is the dishwasher done?"
 - **AI helper (optional)** – names programmes and explains odd cycles. It never measures anything.
 - **Finds your machines** – power sensors named like a dishwasher, washing machine or dryer show up as discovered.
+- **Works with Energy Pilot** – its *Runs cheaply* uses each machine's real programme (minutes and kWh) to start it at the cheapest time.
+- **🛟 Help** – press 🛟 in the panel to write to the developer; the answer comes back in the panel with a notification. Errors in the app are sent anonymously (can be turned off).
 
 ## The panel and the card
 
@@ -60,7 +62,7 @@ You need a smart plug that measures power (W) on each machine.
 
 **Ved hvornår opvaskeren, vaskemaskinen og tørretumbleren *virkelig* er færdige** – ud fra hvad maskinen gør, ikke et ur.
 
-**Sprog:** dansk og engelsk (andre sprog viser engelsk). **Valuta:** alle – den tages fra din pris-sensors enhed (kr, €, £ …). Uden pris-sensor virker alt, bare uden priser.
+**Sprog:** dansk, engelsk, tysk, svensk, norsk, hollandsk og fransk. **Valuta:** alle – den tages fra din pris-sensors enhed (kr, €, £ …). Uden pris-sensor virker alt, bare uden priser.
 
 - **Færdig når den er færdig** – lærer pauserne i hvert program; en dørsensor gør det øjeblikkeligt.
 - **Lærer aldrig af sine egne fejl** – kun vaske med en tydelig slutning bruges.

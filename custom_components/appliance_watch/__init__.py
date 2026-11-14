@@ -26,6 +26,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data[DOMAIN] = hub
     await hub.async_setup()
     websocket.async_setup(hass)
+    from .hub import _TITLES
+    from .support import Support
+
+    # Help and answers from the developer, errors sent anonymously (support.py) - one for the whole integration.
+    support = Support(hass, DOMAIN, "appliance-watch", _TITLES.get(hass.config.language.split("-")[0], "Appliances"),
+                      summary=lambda: {"machines": len(hub.machines),
+                                       "kinds": sorted({m.kind for m in hub.machines.values()}),
+                                       "cycles": sum(len(m.cycles) for m in hub.machines.values())})
+    await support.async_setup()
+    hass.bus.async_listen_once("homeassistant_stop", lambda _event: support.unload())
 
     def machine_of(call: ServiceCall) -> Machine:
         entity_id = call.data["entity_id"]

@@ -80,9 +80,11 @@ class Hub:
 
         self.speaker = Speaker(self.hass, self)
         folder = Path(__file__).parent / "frontend"
-        await self.hass.http.async_register_static_paths([StaticPathConfig(STATIC, str(folder), cache_headers=False)])
         stamp = await self.hass.async_add_executor_job(_stamp, folder)
-        frontend.add_extra_js_url(self.hass, f"{STATIC}/card.js?v={stamp}")
+        # Files under a new address for every change, so a browser never mixes old and new files.
+        self._base = f"{STATIC}/{stamp}"
+        await self.hass.http.async_register_static_paths([StaticPathConfig(self._base, str(folder), cache_headers=False)])
+        frontend.add_extra_js_url(self.hass, f"{self._base}/card.js?v={stamp}")
         self._stamp = stamp
         self._unsubs.append(self.hass.bus.async_listen("mobile_app_notification_action", self._action))
         if self.hass.state is CoreState.running:
@@ -105,7 +107,7 @@ class Hub:
                 webcomponent_name="appliance-watch-panel",
                 sidebar_title=_TITLES.get(self.hass.config.language.split("-")[0], "Appliances"),
                 sidebar_icon="mdi:washing-machine",
-                module_url=f"{STATIC}/panel.js?v={self._stamp}",
+                module_url=f"{self._base}/panel.js?v={self._stamp}",
                 require_admin=False,
             )
 

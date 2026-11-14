@@ -52,6 +52,12 @@
         "dishwasher": "Oppvaskmaskin",
         "washer": "Vaskemaskin",
         "dryer": "Tørketrommel",
+        "washer_dryer": "Vaske-tørkemaskin",
+        "printer": "3D-printer",
+        "oven": "Airfryer / stekeovn",
+        "coffee": "Kaffemaskin",
+        "dehumidifier": "Avfukter",
+        "freezer": "Fryser / kjøleskap",
         "other": "Annet"
       }
     }
@@ -64,7 +70,8 @@
           "off": "Av",
           "running": "Går",
           "finishing": "Nesten ferdig",
-          "finished": "Ferdig"
+          "finished": "Ferdig",
+          "alert": "Trenger tilsyn"
         }
       },
       "program": {

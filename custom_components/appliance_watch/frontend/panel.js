@@ -8,48 +8,56 @@ const SUGGEST = {
     dishwasher: ["Øko 50°", "Auto 45-65°", "Intensiv 70°", "Hurtig 45°", "Skyl", "Glas 40°", "Maskinpleje"],
     washer: ["Bomuld 40°", "Bomuld 60°", "Øko 40-60", "Kulørt 30°", "Hurtigvask 30°", "Syntetisk 40°", "Uld", "Sengetøj 60°", "Skyl og centrifugering"],
     dryer: ["Skabstørt", "Ekstra tørt", "Strygetørt", "Syntetisk", "Uld", "Opfriskning", "Tidsprogram"],
+    washer_dryer: ["Vask 40°", "Vask og tør", "Bomuld 60°", "Kun tørring", "Hurtig vask og tør"], printer: ["PLA", "PETG", "ABS", "TPU", "Hurtigt print"], oven: ["Pommes frites", "Kylling", "Grøntsager", "Bagning", "Opvarmning", "Brød"], coffee: ["Kaffe", "Espresso", "Cappuccino", "Latte", "Kande"], dehumidifier: [], freezer: [],
     other: [],
   },
   en: {
     dishwasher: ["Eco 50°", "Auto 45-65°", "Intensive 70°", "Quick 45°", "Pre-rinse", "Glass 40°", "Machine care"],
     washer: ["Cotton 40°", "Cotton 60°", "Eco 40-60", "Colours 30°", "Quick 30°", "Synthetics 40°", "Wool", "Bedding 60°", "Rinse and spin"],
     dryer: ["Cupboard dry", "Extra dry", "Iron dry", "Synthetics", "Wool", "Refresh", "Timed"],
+    washer_dryer: ["Wash 40°", "Wash and dry", "Cotton 60°", "Dry only", "Quick wash and dry"], printer: ["PLA", "PETG", "ABS", "TPU", "Quick print"], oven: ["Fries", "Chicken", "Vegetables", "Baking", "Reheat", "Bread"], coffee: ["Coffee", "Espresso", "Cappuccino", "Latte", "Jug"], dehumidifier: [], freezer: [],
     other: [],
   },
   de: {
     dishwasher: ["Eco 50°", "Auto 45-65°", "Intensiv 70°", "Kurz 45°", "Vorspülen", "Glas 40°", "Maschinenpflege"],
     washer: ["Baumwolle 40°", "Baumwolle 60°", "Eco 40-60", "Bunt 30°", "Kurz 30°", "Pflegeleicht 40°", "Wolle", "Bettwäsche 60°", "Spülen und Schleudern"],
     dryer: ["Schranktrocken", "Extratrocken", "Bügeltrocken", "Pflegeleicht", "Wolle", "Auffrischen", "Zeitprogramm"],
+    washer_dryer: ["Waschen 40°", "Waschen und Trocknen", "Baumwolle 60°", "Nur Trocknen", "Schnell Waschen und Trocknen"], printer: ["PLA", "PETG", "ABS", "TPU", "Schnelldruck"], oven: ["Pommes", "Hähnchen", "Gemüse", "Backen", "Aufwärmen", "Brot"], coffee: ["Kaffee", "Espresso", "Cappuccino", "Latte", "Kanne"], dehumidifier: [], freezer: [],
     other: [],
   },
   sv: {
     dishwasher: ["Eco 50°", "Auto 45-65°", "Intensiv 70°", "Snabb 45°", "Försköljning", "Glas 40°", "Maskinvård"],
     washer: ["Bomull 40°", "Bomull 60°", "Eco 40-60", "Kulört 30°", "Snabbtvätt 30°", "Syntet 40°", "Ull", "Sängkläder 60°", "Skölj och centrifugering"],
     dryer: ["Skåptorrt", "Extra torrt", "Stryktorrt", "Syntet", "Ull", "Uppfräschning", "Tidsprogram"],
+    washer_dryer: ["Tvätt 40°", "Tvätt och tork", "Bomull 60°", "Bara tork", "Snabb tvätt och tork"], printer: ["PLA", "PETG", "ABS", "TPU", "Snabbutskrift"], oven: ["Pommes", "Kyckling", "Grönsaker", "Bakning", "Uppvärmning", "Bröd"], coffee: ["Kaffe", "Espresso", "Cappuccino", "Latte", "Kanna"], dehumidifier: [], freezer: [],
     other: [],
   },
   nb: {
     dishwasher: ["Øko 50°", "Auto 45-65°", "Intensiv 70°", "Hurtig 45°", "Skyll", "Glass 40°", "Maskinpleie"],
     washer: ["Bomull 40°", "Bomull 60°", "Øko 40-60", "Kulørt 30°", "Hurtigvask 30°", "Syntetisk 40°", "Ull", "Sengetøy 60°", "Skyll og sentrifuge"],
     dryer: ["Skaptørt", "Ekstra tørt", "Stryketørt", "Syntetisk", "Ull", "Oppfriskning", "Tidsprogram"],
+    washer_dryer: ["Vask 40°", "Vask og tørk", "Bomull 60°", "Bare tørk", "Rask vask og tørk"], printer: ["PLA", "PETG", "ABS", "TPU", "Raskt print"], oven: ["Pommes frites", "Kylling", "Grønnsaker", "Baking", "Oppvarming", "Brød"], coffee: ["Kaffe", "Espresso", "Cappuccino", "Latte", "Kanne"], dehumidifier: [], freezer: [],
     other: [],
   },
   nl: {
     dishwasher: ["Eco 50°", "Auto 45-65°", "Intensief 70°", "Snel 45°", "Voorspoelen", "Glas 40°", "Machinereiniging"],
     washer: ["Katoen 40°", "Katoen 60°", "Eco 40-60", "Bonte was 30°", "Snel 30°", "Synthetisch 40°", "Wol", "Beddengoed 60°", "Spoelen en centrifugeren"],
     dryer: ["Kastdroog", "Extra droog", "Strijkdroog", "Synthetisch", "Wol", "Opfrissen", "Tijdprogramma"],
+    washer_dryer: ["Wassen 40°", "Wassen en drogen", "Katoen 60°", "Alleen drogen", "Snel wassen en drogen"], printer: ["PLA", "PETG", "ABS", "TPU", "Snelle print"], oven: ["Friet", "Kip", "Groenten", "Bakken", "Opwarmen", "Brood"], coffee: ["Koffie", "Espresso", "Cappuccino", "Latte", "Kan"], dehumidifier: [], freezer: [],
     other: [],
   },
   fr: {
     dishwasher: ["Éco 50°", "Auto 45-65°", "Intensif 70°", "Rapide 45°", "Prélavage", "Verres 40°", "Entretien machine"],
     washer: ["Coton 40°", "Coton 60°", "Éco 40-60", "Couleurs 30°", "Rapide 30°", "Synthétique 40°", "Laine", "Draps 60°", "Rinçage essorage"],
     dryer: ["Prêt à ranger", "Extra sec", "Prêt à repasser", "Synthétique", "Laine", "Rafraîchir", "Minuterie"],
+    washer_dryer: ["Lavage 40°", "Lavage et séchage", "Coton 60°", "Séchage seul", "Lavage et séchage rapides"], printer: ["PLA", "PETG", "ABS", "TPU", "Impression rapide"], oven: ["Frites", "Poulet", "Légumes", "Pâtisserie", "Réchauffer", "Pain"], coffee: ["Café", "Espresso", "Cappuccino", "Latte", "Verseuse"], dehumidifier: [], freezer: [],
     other: [],
   },
 };
 
 const T = {
   en: {
+    savedCheap: "saved by timing", savedOne: "saved",
     title: "Appliances", settings: "Settings", back: "Back", menu: "Menu", saved: "Saved ✓", add: "Add machine",
     found: "Found in your home", addIt: "Add", running: "running", done: "done", ready: "All ready", month: "This month",
     cycles: "cycles", sinceStart: "so far", last: "Last", soon: "any minute", min: "min", now: "now",
@@ -76,12 +84,13 @@ const T = {
     s: {
       phones: "Notifications", phonesHint: "Who gets a message when a machine is done.", onlyHome: "Only those at home",
       onlyHomeHint: "Phones away from home get nothing - unless nobody is home.", start: "Also when it starts",
-      remind: "Remind if not emptied", off: "Off", price: "Electricity price", priceHint: "For the price of each cycle and the cheapest time to start.",
+      remind: "Remind if not emptied", off: "Off", price: "Electricity price", priceHint: "For the price of each cycle and the cheapest time to start.", priceEP: "⚡ Energy Pilot (the full price)", extras: "On top of the spot price", extrasH: "Your price is the spot price alone – add the grid tariff and taxes so a cycle costs what it really costs.", add: "Grid tariff and taxes per kWh", vat: "VAT %", peak: "Dearer period", peakAdd: "Extra per kWh then",
       cheap: "Show a cheaper start when it saves at least", ai: "AI helper", aiHint: "Names programmes and explains odd cycles. It never measures anything.",
       dry: "Done when the drying is over", dryHint: "Off: done as soon as the work is over (it may still dry quietly).",
     },
   },
   da: {
+    savedCheap: "sparet på tidspunktet", savedOne: "sparede",
     title: "Maskiner", settings: "Indstillinger", back: "Tilbage", menu: "Menu", saved: "Gemt ✓", add: "Tilføj maskine",
     found: "Fundet i dit hjem", addIt: "Tilføj", running: "kører", done: "færdig", ready: "Alle er klar", month: "Denne måned",
     cycles: "vaske", sinceStart: "indtil nu", last: "Sidst", soon: "om lidt", min: "min", now: "nu",
@@ -108,12 +117,13 @@ const T = {
     s: {
       phones: "Besked", phonesHint: "Hvem der får besked, når en maskine er færdig.", onlyHome: "Kun dem der er hjemme",
       onlyHomeHint: "Telefoner ude af huset får intet - medmindre ingen er hjemme.", start: "Også når den starter",
-      remind: "Påmind hvis ikke tømt", off: "Fra", price: "Elpris", priceHint: "Til prisen for hver vask og det billigste tidspunkt at starte.",
+      remind: "Påmind hvis ikke tømt", off: "Fra", price: "Elpris", priceHint: "Til prisen for hver vask og det billigste tidspunkt at starte.", priceEP: "⚡ Energipilot (den samlede pris)", extras: "Oven i spotprisen", extrasH: "Din pris er kun spotprisen – læg nettarif og afgifter oveni, så en vask koster det, den virkelig koster.", add: "Nettarif og afgifter pr. kWh", vat: "Moms %", peak: "Dyr periode", peakAdd: "Ekstra pr. kWh i perioden",
       cheap: "Vis billigere start, når den sparer mindst", ai: "AI-hjælper", aiHint: "Navngiver programmer og forklarer mærkelige vaske. Den måler aldrig noget.",
       dry: "Færdig når tørringen er slut", dryHint: "Fra: færdig så snart arbejdet er slut (den kan stadig tørre stille).",
     },
   },
   de: {
+    savedCheap: "gespart durch die Uhrzeit", savedOne: "gespart",
     title: "Geräte", settings: "Einstellungen", back: "Zurück", menu: "Menü", saved: "Gespeichert ✓", add: "Gerät hinzufügen",
     found: "In deinem Zuhause gefunden", addIt: "Hinzufügen", running: "läuft", done: "fertig", ready: "Alles bereit", month: "Diesen Monat",
     cycles: "Durchläufe", sinceStart: "bisher", last: "Zuletzt", soon: "gleich", min: "Min.", now: "jetzt",
@@ -140,12 +150,13 @@ const T = {
     s: {
       phones: "Benachrichtigungen", phonesHint: "Wer eine Nachricht bekommt, wenn ein Gerät fertig ist.", onlyHome: "Nur wer zu Hause ist",
       onlyHomeHint: "Handys außer Haus bekommen nichts - außer wenn niemand zu Hause ist.", start: "Auch beim Start",
-      remind: "Erinnern, wenn nicht ausgeräumt", off: "Aus", price: "Strompreis", priceHint: "Für den Preis jedes Durchlaufs und die günstigste Startzeit.",
+      remind: "Erinnern, wenn nicht ausgeräumt", off: "Aus", price: "Strompreis", priceHint: "Für den Preis jedes Durchlaufs und die günstigste Startzeit.", priceEP: "⚡ Energy Pilot (der volle Preis)", extras: "Zusätzlich zum Spotpreis", extrasH: "Dein Preis ist nur der Spotpreis – rechne Netzentgelt und Abgaben dazu, damit ein Durchlauf kostet, was er wirklich kostet.", add: "Netzentgelt und Abgaben pro kWh", vat: "MwSt. %", peak: "Teurere Zeit", peakAdd: "Aufschlag pro kWh dann",
       cheap: "Günstigeren Start zeigen, wenn er mindestens spart", ai: "KI-Helfer", aiHint: "Benennt Programme und erklärt seltsame Durchläufe. Er misst nie etwas.",
       dry: "Fertig, wenn das Trocknen vorbei ist", dryHint: "Aus: fertig, sobald die Arbeit vorbei ist (es kann noch leise trocknen).",
     },
   },
   sv: {
+    savedCheap: "sparat på tiden", savedOne: "sparade",
     title: "Maskiner", settings: "Inställningar", back: "Tillbaka", menu: "Meny", saved: "Sparat ✓", add: "Lägg till maskin",
     found: "Hittad i ditt hem", addIt: "Lägg till", running: "kör", done: "klar", ready: "Allt är klart", month: "Den här månaden",
     cycles: "körningar", sinceStart: "hittills", last: "Senast", soon: "strax", min: "min", now: "nu",
@@ -172,12 +183,13 @@ const T = {
     s: {
       phones: "Aviseringar", phonesHint: "Vem som får ett meddelande när en maskin är klar.", onlyHome: "Bara de som är hemma",
       onlyHomeHint: "Telefoner som är borta får inget - om inte ingen är hemma.", start: "Även när den startar",
-      remind: "Påminn om den inte är tömd", off: "Av", price: "Elpris", priceHint: "För priset på varje körning och billigaste tid att starta.",
+      remind: "Påminn om den inte är tömd", off: "Av", price: "Elpris", priceHint: "För priset på varje körning och billigaste tid att starta.", priceEP: "⚡ Energy Pilot (hela priset)", extras: "Utöver spotpriset", extrasH: "Ditt pris är bara spotpriset – lägg till nätavgift och skatter så att en körning kostar vad den verkligen kostar.", add: "Nätavgift och skatter per kWh", vat: "Moms %", peak: "Dyrare period", peakAdd: "Extra per kWh då",
       cheap: "Visa billigare start när den sparar minst", ai: "AI-hjälpare", aiHint: "Namnger program och förklarar konstiga körningar. Den mäter aldrig något.",
       dry: "Klar när torkningen är slut", dryHint: "Av: klar så fort arbetet är slut (den kan fortfarande torka tyst).",
     },
   },
   nb: {
+    savedCheap: "spart på tidspunktet", savedOne: "sparte",
     title: "Maskiner", settings: "Innstillinger", back: "Tilbake", menu: "Meny", saved: "Lagret ✓", add: "Legg til maskin",
     found: "Funnet i hjemmet ditt", addIt: "Legg til", running: "går", done: "ferdig", ready: "Alt er klart", month: "Denne måneden",
     cycles: "vask", sinceStart: "så langt", last: "Sist", soon: "om litt", min: "min", now: "nå",
@@ -204,12 +216,13 @@ const T = {
     s: {
       phones: "Varsler", phonesHint: "Hvem som får beskjed når en maskin er ferdig.", onlyHome: "Bare de som er hjemme",
       onlyHomeHint: "Telefoner utenfor huset får ingenting - med mindre ingen er hjemme.", start: "Også når den starter",
-      remind: "Påminn hvis ikke tømt", off: "Av", price: "Strømpris", priceHint: "For prisen på hver vask og det billigste tidspunktet å starte.",
+      remind: "Påminn hvis ikke tømt", off: "Av", price: "Strømpris", priceHint: "For prisen på hver vask og det billigste tidspunktet å starte.", priceEP: "⚡ Energy Pilot (hele prisen)", extras: "I tillegg til spotprisen", extrasH: "Prisen din er bare spotprisen – legg til nettleie og avgifter, så en vask koster det den virkelig koster.", add: "Nettleie og avgifter per kWh", vat: "MVA %", peak: "Dyrere periode", peakAdd: "Ekstra per kWh da",
       cheap: "Vis billigere start når den sparer minst", ai: "AI-hjelper", aiHint: "Navngir programmer og forklarer rare vask. Den måler aldri noe.",
       dry: "Ferdig når tørkingen er over", dryHint: "Av: ferdig så snart arbeidet er over (den kan fortsatt tørke stille).",
     },
   },
   nl: {
+    savedCheap: "bespaard door het moment", savedOne: "bespaard",
     title: "Apparaten", settings: "Instellingen", back: "Terug", menu: "Menu", saved: "Opgeslagen ✓", add: "Apparaat toevoegen",
     found: "Gevonden in je huis", addIt: "Toevoegen", running: "bezig", done: "klaar", ready: "Alles klaar", month: "Deze maand",
     cycles: "keer", sinceStart: "tot nu toe", last: "Laatst", soon: "zo klaar", min: "min", now: "nu",
@@ -236,12 +249,13 @@ const T = {
     s: {
       phones: "Meldingen", phonesHint: "Wie een bericht krijgt als een apparaat klaar is.", onlyHome: "Alleen wie thuis is",
       onlyHomeHint: "Telefoons buitenshuis krijgen niets - tenzij er niemand thuis is.", start: "Ook bij het starten",
-      remind: "Herinneren als niet uitgeruimd", off: "Uit", price: "Stroomprijs", priceHint: "Voor de prijs van elke keer en het goedkoopste moment om te starten.",
+      remind: "Herinneren als niet uitgeruimd", off: "Uit", price: "Stroomprijs", priceHint: "Voor de prijs van elke keer en het goedkoopste moment om te starten.", priceEP: "⚡ Energy Pilot (de volle prijs)", extras: "Bovenop de spotprijs", extrasH: "Je prijs is alleen de spotprijs – tel netkosten en belastingen erbij, zodat een keer kost wat het echt kost.", add: "Netkosten en belastingen per kWh", vat: "Btw %", peak: "Duurdere periode", peakAdd: "Extra per kWh dan",
       cheap: "Goedkopere start tonen als die minstens bespaart", ai: "AI-hulp", aiHint: "Geeft programma's een naam en legt vreemde keren uit. Meet zelf nooit iets.",
       dry: "Klaar als het drogen voorbij is", dryHint: "Uit: klaar zodra het werk voorbij is (hij kan nog stil nadrogen).",
     },
   },
   fr: {
+    savedCheap: "économisé grâce à l'heure", savedOne: "économisé",
     title: "Appareils", settings: "Réglages", back: "Retour", menu: "Menu", saved: "Enregistré ✓", add: "Ajouter un appareil",
     found: "Trouvé chez vous", addIt: "Ajouter", running: "en marche", done: "terminé", ready: "Tout est prêt", month: "Ce mois-ci",
     cycles: "cycles", sinceStart: "jusqu'ici", last: "Dernier", soon: "d'une minute à l'autre", min: "min", now: "maintenant",
@@ -268,7 +282,7 @@ const T = {
     s: {
       phones: "Notifications", phonesHint: "Qui reçoit un message quand un appareil a terminé.", onlyHome: "Seulement ceux qui sont là",
       onlyHomeHint: "Les téléphones hors de la maison ne reçoivent rien - sauf si personne n'est là.", start: "Aussi au démarrage",
-      remind: "Rappeler si pas vidé", off: "Désactivé", price: "Prix de l'électricité", priceHint: "Pour le prix de chaque cycle et le meilleur moment pour démarrer.",
+      remind: "Rappeler si pas vidé", off: "Désactivé", price: "Prix de l'électricité", priceHint: "Pour le prix de chaque cycle et le meilleur moment pour démarrer.", priceEP: "⚡ Energy Pilot (le prix complet)", extras: "En plus du prix spot", extrasH: "Votre prix n'est que le prix spot – ajoutez le réseau et les taxes pour qu'un cycle coûte ce qu'il coûte vraiment.", add: "Réseau et taxes par kWh", vat: "TVA %", peak: "Période plus chère", peakAdd: "Supplément par kWh alors",
       cheap: "Proposer un départ moins cher s'il économise au moins", ai: "Assistant IA", aiHint: "Nomme les programmes et explique les cycles bizarres. Il ne mesure jamais rien.",
       dry: "Terminé quand le séchage est fini", dryHint: "Désactivé : terminé dès que le travail est fini (il peut encore sécher en silence).",
     },
@@ -426,6 +440,8 @@ class ApplianceWatchPanel extends HTMLElement {
     const t = this.t, w = this.w, ms = this._machines;
     const d = new Date().toLocaleDateString(LOCALES[this.L], { weekday: "long", day: "numeric", month: "long" });
     const today = d.charAt(0).toUpperCase() + d.slice(1);
+    const al = ms.find((m) => m.state === "alert");  // a freezer or dehumidifier in trouble comes first
+    if (al) return { kicker: today, title: `⚠️ ${esc(al.name)}`, sub: w.alerts[al.alert] || w.states.alert, color: "#ef4444", m: al };
     const fin = ms.find((m) => m.state === "finished");
     if (fin) return { kicker: today, title: `${esc(fin.name)} ${t.isDone}`, sub: w.waiting, color: "#22c55e", m: fin };
     const run = ms.filter((m) => m.state === "running" || m.state === "finishing")
@@ -441,7 +457,9 @@ class ApplianceWatchPanel extends HTMLElement {
   _totals() {
     const ms = this._machines, sum = (k) => ms.reduce((a, m) => a + ((m.month || {})[k] || 0), 0);
     const anyCost = ms.some((m) => m.month?.cost != null);
-    return { count: sum("count"), kwh: sum("kwh"), cost: anyCost ? sum("cost") : null, currency: ms.find((m) => m.currency)?.currency };
+    const anySaved = ms.some((m) => m.month?.saved != null);
+    return { count: sum("count"), kwh: sum("kwh"), cost: anyCost ? sum("cost") : null, saved: anySaved ? sum("saved") : null,
+             currency: ms.find((m) => m.currency)?.currency };
   }
 
   _stats() {
@@ -449,7 +467,8 @@ class ApplianceWatchPanel extends HTMLElement {
     if (!x.count) return "";
     return `<div class="hstats"><div><b data-count="${x.count}" data-dec="0">${x.count}</b><span>${t.cycles}</span></div>
       <div><b data-count="${x.kwh}" data-dec="1">${num(x.kwh, this.L, 1)}</b><span>kWh</span></div>
-      ${x.cost != null ? `<div><b data-count="${x.cost}" data-dec="2" data-money="${esc(x.currency || "")}">${money(x.cost, x.currency)}</b><span>${t.month.toLowerCase()}</span></div>` : ""}</div>`;
+      ${x.cost != null ? `<div><b data-count="${x.cost}" data-dec="2" data-money="${esc(x.currency || "")}">${money(x.cost, x.currency)}</b><span>${t.month.toLowerCase()}</span></div>` : ""}
+      ${x.saved > 0.5 ? `<div><b data-count="${x.saved}" data-dec="2" data-money="${esc(x.currency || "")}">${money(x.saved, x.currency)}</b><span>${t.savedCheap}</span></div>` : ""}</div>`;
   }
 
   _countUp() {
@@ -496,6 +515,7 @@ class ApplianceWatchPanel extends HTMLElement {
 
   _status(m) {
     const t = this.t, w = this.w;
+    if (m.watched) return watchText(m, w);
     if (m.state === "running" || m.state === "finishing") {
       const left = minutesLeft(m.finish_time);
       const main = m.finish_time ? `${w.doneAt} <b>${clock(m.finish_time)}</b>` : w.unknownTime;
@@ -503,7 +523,8 @@ class ApplianceWatchPanel extends HTMLElement {
       return { main, sub };
     }
     if (m.state === "finished") return { main: `${w.states.finished} <b>${clock(m.finished_at)}</b>`, sub: w.waiting };
-    const last = m.last ? `${t.last}: ${[m.last.program, dur(m.last.duration, this.L), money(m.last.cost, m.currency)].filter(Boolean).join(" · ")}` : "";
+    const last = m.last ? `${t.last}: ${[m.last.program, dur(m.last.duration, this.L), money(m.last.cost, m.currency),
+      m.last.saved > 0.05 ? `${t.savedOne} ${money(m.last.saved, m.currency)}` : ""].filter(Boolean).join(" · ")}` : "";
     return { main: w.states.off, sub: last };
   }
 
@@ -615,7 +636,7 @@ class ApplianceWatchPanel extends HTMLElement {
     const d = m.devices || {};
     return `<section class="card"><h3>⚙️ ${t.machine}</h3>
       <label>${t.name}<input data-ms="name" value="${esc(m.name)}"></label>
-      <div class="lbl">${t.kind}</div><div class="seg">${["dishwasher", "washer", "dryer", "other"].map((k) =>
+      <div class="lbl">${t.kind}</div><div class="seg">${["dishwasher", "washer", "dryer", "washer_dryer", "printer", "oven", "coffee", "dehumidifier", "freezer", "other"].map((k) =>
         `<button class="${m.kind === k ? "on" : ""}" data-act="mskind" data-kind="${k}">${w.kinds[k]}</button>`).join("")}</div>
       <label>${t.door}<select data-ms="door_sensor">${opts((s) => s.entity_id.startsWith("binary_sensor.") && ["door", "opening", "window"].includes(s.attributes.device_class), d.door_sensor)}</select></label>
       <label>${t.energy}<select data-ms="energy_sensor">${opts((s) => s.entity_id.startsWith("sensor.") && s.attributes.device_class === "energy", d.energy_sensor)}</select></label>
@@ -723,7 +744,12 @@ class ApplianceWatchPanel extends HTMLElement {
       </section>
       ${this._speakSection(s, v, toggle)}
       <section class="card"><h3>⚡ ${t.s.price}</h3><div class="muted">${t.s.priceHint}</div>
-        <select data-set="price_sensor"><option value="">${t.s.off}</option>${s.price_sensors.map((p) => `<option value="${p.entity_id}" ${p.entity_id === v.price_sensor ? "selected" : ""}>${p.forecast ? "📈 " : ""}${esc(p.name)}</option>`).join("")}</select>
+        <select data-set="price_sensor"><option value="">${t.s.off}</option>${s.energy_pilot ? `<option value="energy_pilot" ${v.price_sensor === "energy_pilot" || (!v.price_sensor && s.energy_pilot) ? "selected" : ""}>${t.s.priceEP}</option>` : ""}${s.price_sensors.map((p) => `<option value="${p.entity_id}" ${p.entity_id === v.price_sensor ? "selected" : ""}>${p.forecast ? "📈 " : ""}${esc(p.name)}</option>`).join("")}</select>
+        ${s.spot ? `<div class="lbl">${t.s.extras}</div><div class="muted">${t.s.extrasH}</div>
+          <label>${t.s.add}<input type="number" step="0.01" data-set="price_add" value="${v.price_add ?? 0}"></label>
+          <label>${t.s.vat}<input type="number" step="1" data-set="price_vat" value="${v.price_vat ?? 0}"></label>
+          <div class="lbl">${t.s.peak}</div><div style="display:flex;gap:8px"><input type="time" data-set="price_peak_from" value="${esc(v.price_peak_from || "17:00")}"><input type="time" data-set="price_peak_to" value="${esc(v.price_peak_to || "21:00")}"></div>
+          <label>${t.s.peakAdd}<input type="number" step="0.01" data-set="price_peak_add" value="${v.price_peak_add ?? 0}"></label>` : ""}
         <div class="lbl">${t.s.cheap}</div>${seg("cheap_saving", [[0.5, money(0.5, "kr")], [1, money(1, "kr")], [2, money(2, "kr")], [5, money(5, "kr")]])}
       </section>
       <section class="card"><h3>✨ ${t.s.ai}</h3><div class="muted">${t.s.aiHint}</div>
@@ -755,7 +781,8 @@ class ApplianceWatchPanel extends HTMLElement {
     Object.assign(this._settings.settings, changes);
     await this._ws({ type: "appliance_watch/save_settings", ...changes });
     if ("price_sensor" in changes || "ai_task" in changes) {
-      this._hasPrice = !!this._settings.settings.price_sensor;
+      this._hasPrice = !!this._settings.settings.price_sensor || !!this._settings.energy_pilot;
+      if ("price_sensor" in changes) { this._settings = await this._ws({ type: "appliance_watch/settings" }); this._render(); }  // a spot price shows the extras
       this._hasAi = !!this._settings.settings.ai_task;
     }
     this._toast(this.t.saved);

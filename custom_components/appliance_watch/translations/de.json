@@ -52,6 +52,12 @@
         "dishwasher": "Geschirrspüler",
         "washer": "Waschmaschine",
         "dryer": "Trockner",
+        "washer_dryer": "Waschtrockner",
+        "printer": "3D-Drucker",
+        "oven": "Heißluftfritteuse / Backofen",
+        "coffee": "Kaffeemaschine",
+        "dehumidifier": "Luftentfeuchter",
+        "freezer": "Gefrierschrank / Kühlschrank",
         "other": "Anderes"
       }
     }
@@ -64,7 +70,8 @@
           "off": "Aus",
           "running": "Läuft",
           "finishing": "Fast fertig",
-          "finished": "Fertig"
+          "finished": "Fertig",
+          "alert": "Braucht Aufmerksamkeit"
         }
       },
       "program": {

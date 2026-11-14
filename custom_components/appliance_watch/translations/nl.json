@@ -52,6 +52,12 @@
         "dishwasher": "Vaatwasser",
         "washer": "Wasmachine",
         "dryer": "Droger",
+        "washer_dryer": "Was-droogcombinatie",
+        "printer": "3D-printer",
+        "oven": "Airfryer / oven",
+        "coffee": "Koffiezetapparaat",
+        "dehumidifier": "Ontvochtiger",
+        "freezer": "Vriezer / koelkast",
         "other": "Anders"
       }
     }
@@ -64,7 +70,8 @@
           "off": "Uit",
           "running": "Bezig",
           "finishing": "Bijna klaar",
-          "finished": "Klaar"
+          "finished": "Klaar",
+          "alert": "Vraagt aandacht"
         }
       },
       "program": {

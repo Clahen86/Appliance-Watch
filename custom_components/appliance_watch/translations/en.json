@@ -52,6 +52,12 @@
         "dishwasher": "Dishwasher",
         "washer": "Washing machine",
         "dryer": "Dryer",
+        "washer_dryer": "Washer-dryer",
+        "printer": "3D printer",
+        "oven": "Airfryer / oven",
+        "coffee": "Coffee machine",
+        "dehumidifier": "Dehumidifier",
+        "freezer": "Freezer / fridge",
         "other": "Other"
       }
     }
@@ -64,7 +70,8 @@
           "off": "Off",
           "running": "Running",
           "finishing": "Finishing",
-          "finished": "Done"
+          "finished": "Done",
+          "alert": "Needs attention"
         }
       },
       "program": {

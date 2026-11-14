@@ -52,6 +52,12 @@
         "dishwasher": "Diskmaskin",
         "washer": "Tvättmaskin",
         "dryer": "Torktumlare",
+        "washer_dryer": "Kombimaskin tvätt/tork",
+        "printer": "3D-skrivare",
+        "oven": "Airfryer / ugn",
+        "coffee": "Kaffebryggare",
+        "dehumidifier": "Avfuktare",
+        "freezer": "Frys / kyl",
         "other": "Annat"
       }
     }
@@ -64,7 +70,8 @@
           "off": "Av",
           "running": "Kör",
           "finishing": "Nästan klar",
-          "finished": "Klar"
+          "finished": "Klar",
+          "alert": "Behöver ses över"
         }
       },
       "program": {

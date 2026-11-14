@@ -43,7 +43,7 @@ class StatusSensor(MachineEntity, SensorEntity):
             s.pop(key, None)
         s["findings"] = [f["text"] for f in s["findings"]]
         if last:
-            s["last"] = {k: last[k] for k in ("at", "duration", "kwh", "cost", "program")}
+            s["last"] = {k: last.get(k) for k in ("at", "duration", "kwh", "cost", "program", "saved")}
         return s
 
 

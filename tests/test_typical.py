@@ -11,3 +11,10 @@ def test_typical_is_the_programme_run_most_often():
     assert m.typical() == {"program": "Eco 50°", "n": 4, "minutes": 180, "kwh": 0.9}
     m.cycles = m.cycles[:2]
     assert m.typical() is None  # too few to say
+
+
+def test_saved_by_starting_at_a_cheap_time():
+    c = {"wh": 1000, "cost": 0.80, "ref_price": 2.0}
+    # what _finished stores: the same cycle at a usual price of the day minus what it cost
+    saved = round(c["wh"] / 1000 * c["ref_price"] - c["cost"], 2)
+    assert saved == 1.2

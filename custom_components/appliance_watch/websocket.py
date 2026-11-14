@@ -14,6 +14,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
 from . import ai
+from . import prices
 from .const import (
     CONF_DOOR,
     CONF_SPEAKER,
@@ -37,6 +38,11 @@ from .const import (
     SET_NOTIFY_START,
     SET_ONLY_HOME,
     SET_PRICE,
+    SET_PRICE_ADD,
+    SET_PRICE_VAT,
+    SET_PEAK_ADD,
+    SET_PEAK_FROM,
+    SET_PEAK_TO,
     SET_REMIND,
 )
 from .hub import SIGNAL_ALL, Hub
@@ -74,7 +80,7 @@ def ws_machines(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
     hub = _hub(hass)
     connection.send_result(msg["id"], {
         "machines": _all(hass), "admin": connection.user.is_admin,
-        "has_price": bool(hub.settings.get(SET_PRICE)), "has_ai": bool(hub.settings.get(SET_AI)),
+        "has_price": bool(hub.settings.get(SET_PRICE) or prices.energy_pilot(hass)), "has_ai": bool(hub.settings.get(SET_AI)),
         "found": hub.candidates() if connection.user.is_admin else [],
     })
 
@@ -227,7 +233,7 @@ def _price_sensors(hass: HomeAssistant) -> list[dict[str, str]]:
     for state in hass.states.async_all("sensor"):
         unit = str(state.attributes.get("unit_of_measurement") or "")
         if unit.lower().endswith(("/kwh", "/mwh")):
-            forecast = any(isinstance(state.attributes.get(k), list) for k in ("prices", "raw_today", "forecast", "today"))
+            forecast = any(isinstance(state.attributes.get(k), list) for k in prices.LIST_KEYS)
             out.append({"entity_id": state.entity_id, "name": state.attributes.get("friendly_name") or state.entity_id,
                         "forecast": forecast})
     return sorted(out, key=lambda x: (not x["forecast"], x["name"].lower()))
@@ -244,6 +250,8 @@ def ws_settings(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
         "settings": hub.settings,
         "notify_services": sorted(notify | set(current)),
         "price_sensors": _price_sensors(hass),
+        "energy_pilot": prices.energy_pilot(hass) is not None,  # its total price can be chosen
+        "spot": prices.is_spot_only(hass, hub.settings.get(SET_PRICE)),  # the extras belong on top
         "ai_tasks": sorted(s.entity_id for s in hass.states.async_all("ai_task")),
         "speakers": sorted(({"entity_id": s.entity_id, "name": s.attributes.get("friendly_name") or s.entity_id,
                               "off": s.state in ("unavailable", "off")}
@@ -260,7 +268,12 @@ def ws_settings(hass: HomeAssistant, connection: websocket_api.ActiveConnection,
     vol.Optional(SET_NOTIFY): [cv.string],
     vol.Optional(SET_ONLY_HOME): cv.boolean,
     vol.Optional(SET_REMIND): vol.All(vol.Coerce(int), vol.Range(min=0, max=720)),
-    vol.Optional(SET_PRICE): vol.Any(None, cv.entity_id),
+    vol.Optional(SET_PRICE): vol.Any(None, "energy_pilot", cv.entity_id),
+    vol.Optional(SET_PRICE_ADD): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=-100, max=100000))),
+    vol.Optional(SET_PRICE_VAT): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0, max=100))),
+    vol.Optional(SET_PEAK_ADD): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=-100, max=100000))),
+    vol.Optional(SET_PEAK_FROM): vol.Match(r"^\d{1,2}:\d{2}$"),
+    vol.Optional(SET_PEAK_TO): vol.Match(r"^\d{1,2}:\d{2}$"),
     vol.Optional(SET_AI): vol.Any(None, cv.entity_domain("ai_task")),
     vol.Optional(SET_CHEAP): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
     vol.Optional(SET_NOTIFY_START): cv.boolean,

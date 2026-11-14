@@ -24,7 +24,7 @@ from .const import (
     DEFAULT_SETTINGS,
     DOMAIN,
     KIND_OTHER,
-    KIND_WORDS,
+    KIND_ORDER, KIND_WORDS,
     SET_FINISH_AFTER_DRY,
     SET_NOTIFY,
     SET_ONLY_HOME,
@@ -60,7 +60,7 @@ SENTENCES = [
 
 def guess_kind(*names: str | None) -> str:
     text = " ".join(n for n in names if n).lower()
-    for kind in ("dishwasher", "dryer", "washer"):  # "tørretumbler" before "vask"
+    for kind in KIND_ORDER:  # the more particular first: "vaske-tørre" before "vask", "tørretumbler" before "vask"
         if any(w in text for w in KIND_WORDS[kind]):
             return kind
     return KIND_OTHER

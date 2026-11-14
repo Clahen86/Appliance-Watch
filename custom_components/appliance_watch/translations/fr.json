@@ -52,6 +52,12 @@
         "dishwasher": "Lave-vaisselle",
         "washer": "Lave-linge",
         "dryer": "Sèche-linge",
+        "washer_dryer": "Lavante-séchante",
+        "printer": "Imprimante 3D",
+        "oven": "Air fryer / four",
+        "coffee": "Machine à café",
+        "dehumidifier": "Déshumidificateur",
+        "freezer": "Congélateur / réfrigérateur",
         "other": "Autre"
       }
     }
@@ -64,7 +70,8 @@
           "off": "Arrêt",
           "running": "En marche",
           "finishing": "Presque fini",
-          "finished": "Terminé"
+          "finished": "Terminé",
+          "alert": "Demande attention"
         }
       },
       "program": {

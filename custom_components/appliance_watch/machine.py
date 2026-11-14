@@ -27,6 +27,7 @@ from .const import (
     CONF_SWITCH,
     CYCLES_KEPT,
     DOMAIN,
+    EVENT_ALERT,
     EVENT_EMPTIED,
     EVENT_FINISHED,
     EVENT_STARTED,
@@ -44,8 +45,10 @@ from .const import (
     STATE_FINISHING,
     STATE_OFF,
     STATE_RUNNING,
+    WATCH_KINDS,
 )
 from .detector import Detector
+from .watcher import Watcher
 from .speaker import spoken_money, spoken_wait
 from .texts import ICONS, duration, money, t
 
@@ -65,6 +68,8 @@ class Machine:
         self.programs: dict[str, dict[str, Any]] = {}
         self.findings: list[dict[str, Any]] = []
         self.detector = Detector(self.profile)
+        # A freezer or a dehumidifier runs all the time: watched for trouble instead of cycles (watcher.py).
+        self.watcher = Watcher(self.kind, self.profile.active_w) if self.kind in WATCH_KINDS else None
         self.live_program: str | None = None
         self.live_score = 0.0
         self.finish_time: datetime | None = None
@@ -101,11 +106,11 @@ class Machine:
 
     @property
     def state(self) -> str:
-        return self.detector.state
+        return self.watcher.state if self.watcher else self.detector.state
 
     @property
     def live(self) -> dict[str, Any] | None:
-        return self.detector.cycle if self.detector.confirmed else None
+        return self.detector.cycle if self.detector.confirmed and not self.watcher else None
 
     def program_name(self, pid: str | None, language: str | None = None) -> str | None:
         if pid is None or (p := self.programs.get(pid)) is None:
@@ -134,6 +139,9 @@ class Machine:
         self.imported = bool(data.get("imported"))
         self.deleted: list[float] = data.get("deleted", [])
         self.detector.load(data.get("detector"), time.time())
+        if self.watcher:
+            self.watcher.load(data.get("watcher"))
+            self.imported = True  # nothing to learn from the history: there are no programmes
         self.detector.finish_after_drying = bool(self.hub.settings.get(SET_FINISH_AFTER_DRY))
         self._last_wh = (self.detector.cycle or {}).get("wh", 0.0)
         self._update_quiet()
@@ -143,7 +151,11 @@ class Machine:
         self._unsubs.append(async_track_time_interval(self.hass, self._tick, TICK))
         self._unsubs.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_stop))
         if (state := self.hass.states.get(power)) is not None:
-            self._handle(self.detector.sample(time.time(), _watts(state.state, state.attributes)))
+            w = _watts(state.state, state.attributes)
+            if self.watcher:
+                self._watched(self.watcher.sample(time.time(), w))
+            else:
+                self._handle(self.detector.sample(time.time(), w))
         self._refresh()
         if not self.imported:
             # A new machine learns from the power readings Home Assistant has, once - after that the history is the
@@ -220,7 +232,7 @@ class Machine:
         await self.store.async_save({
             "cycles": self.cycles[-CYCLES_KEPT:], "programs": self.programs, "findings": self.findings,
             "detector": self.detector.dump(), "notified_done": self.notified_done, "imported": self.imported,
-            "deleted": self.deleted[-100:],
+            "deleted": self.deleted[-100:], "watcher": self.watcher.dump() if self.watcher else None,
         })
 
     @callback
@@ -236,7 +248,9 @@ class Machine:
         entity_id = event.data["entity_id"]
         new = event.data["new_state"]
         now = time.time()
-        if entity_id == self.option(CONF_POWER):
+        if entity_id == self.option(CONF_POWER) and self.watcher:
+            self._watched(self.watcher.sample(now, _watts(new.state, new.attributes) if new else None))
+        elif entity_id == self.option(CONF_POWER):
             self._handle(self.detector.sample(now, _watts(new.state, new.attributes) if new else None))
         elif entity_id == self.option(CONF_DOOR) and new is not None:
             self._handle(self.detector.door(now, new.state == STATE_ON))
@@ -246,6 +260,10 @@ class Machine:
 
     @callback
     def _tick(self, _now: datetime) -> None:
+        if self.watcher:
+            self._watched(self.watcher.tick(time.time()))
+            self._refresh()
+            return
         self._handle(self.detector.tick(time.time()))
         self._refresh()
         if self.state != STATE_OFF:
@@ -277,10 +295,24 @@ class Machine:
             elif kind == "false_start":
                 self.live_program, self._last_wh = None, 0.0
 
+    @callback
+    def _watched(self, events: list[tuple[str, Any]]) -> None:
+        """A watched machine: an alert when something is wrong, and word when it works again."""
+        for what, reason in events:
+            self.hass.bus.async_fire(EVENT_ALERT, {"entry_id": self.entry.entry_id, "name": self.name, "kind": self.kind,
+                                                   "reason": reason, "ok": what == "ok"})
+            key = f"alert_{reason}" if what == "alert" else "alert_ok"
+            title = t(self.hass, f"{key}_title", icon=ICONS.get(self.kind, ""), name=self.name)
+            self.hass.async_create_task(self.hub.async_notify(self, title, t(self.hass, key, name=self.name)), eager_start=False)
+            self._schedule_save(True)
+
     def _started(self, cycle: dict[str, Any]) -> None:
         cycle["id"] = uuid.uuid4().hex[:12]
         cycle["meter_start"] = self._meter()
         cycle["cost"] = 0.0 if self._price()[0] is not None else None
+        # What a usual hour costs from now (the next 24 h known): "saved" compares the cycle with it.
+        rows = [r for r in prices.forecast(self.hass, self.hub.settings) if (r[0] - dt_util.utcnow()).total_seconds() < 24 * 3600]
+        cycle["ref_price"] = round(sum(r[2] for r in rows) / len(rows), 4) if len(rows) >= 6 else None
         self._last_wh = 0.0
         self._count_cost()
         self.live_program, self.live_score = None, 0.0
@@ -294,6 +326,9 @@ class Machine:
     def _finished(self, cycle: dict[str, Any]) -> None:
         self._count_cost()
         self._use_meter(cycle)
+        if cycle.get("cost") is not None and cycle.get("ref_price") and cycle.get("wh"):
+            # Started at a cheap time: what it cost against the same cycle at a usual price of the day.
+            cycle["saved"] = round(cycle["wh"] / 1000 * cycle["ref_price"] - cycle["cost"], 2)
         cycle["clean"] = learning.is_clean(cycle, self.profile)
         cycle["at"] = dt_util.utc_from_timestamp(cycle["end"]).isoformat()
         if cycle.get("program") is None:
@@ -362,6 +397,11 @@ class Machine:
         c = self.live
         now = time.time()
         self.power = self.detector.w
+        if self.watcher:
+            self.power, self.finish_time, self.progress, self.cheap = self.watcher.w, None, None, None
+            async_dispatcher_send(self.hass, SIGNAL_UPDATE.format(self.entry.entry_id))
+            self.hub.async_changed()
+            return
         if c is not None and self.state in (STATE_RUNNING, STATE_FINISHING):
             self._count_cost()
             elapsed = now - c["start"]
@@ -414,7 +454,7 @@ class Machine:
             c["cost"] += delta / 1000 * price
 
     def _price(self) -> tuple[float | None, str | None]:
-        return prices.current(self.hass, self.hub.settings.get(SET_PRICE))
+        return prices.current(self.hass, self.hub.settings)
 
     @property
     def currency(self) -> str | None:
@@ -446,13 +486,13 @@ class Machine:
 
     def _cheapest(self) -> dict[str, Any] | None:
         """For a machine that is off: when its usual programme would be cheapest to start."""
-        if not self.cycles or not self.hub.settings.get(SET_PRICE):
+        if not self.cycles or not (self.hub.settings.get(SET_PRICE) or prices.energy_pilot(self.hass)):
             return None
         pid = next((c.get("program") for c in reversed(self.cycles) if c.get("program")), None)
         ref = next((c for c in reversed(self.cycles) if c.get("program") == pid and c.get("clean")), None)
         if ref is None:
             return None
-        found = prices.cheapest(ref["curve"], prices.forecast(self.hass, self.hub.settings.get(SET_PRICE)))
+        found = prices.cheapest(ref["curve"], prices.forecast(self.hass, self.hub.settings))
         if found is None or found["saving"] < float(self.hub.settings.get(SET_CHEAP) or 0):
             return None
         return {**found, "program": self.program_name(pid)}
@@ -674,13 +714,15 @@ class Machine:
                 for f in self.findings
             ],
             "devices": {k: self.option(k) for k in (CONF_POWER, CONF_ENERGY, CONF_DOOR, CONF_SWITCH, CONF_SPEAKER)},
+            "watched": bool(self.watcher), "alert": self.watcher.alert if self.watcher else None,
         }
         month = dt_util.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
         today = dt_util.start_of_local_day().timestamp()
         this_month = [x for x in self.cycles if x.get("end") and x["end"] >= month]
         costs = [x["cost"] for x in this_month if x.get("cost") is not None]
+        saved = [x["saved"] for x in this_month if x.get("saved") is not None]
         out["month"] = {"count": len(this_month), "kwh": round(sum(x["wh"] for x in this_month) / 1000, 1),
-                        "cost": round(sum(costs), 2) if costs else None}
+                        "cost": round(sum(costs), 2) if costs else None, "saved": round(sum(saved), 2) if saved else None}
         # For the timeline on the front page: today's cycles (start and end, as timestamps).
         out["today"] = [[round(x["start"]), round(x["end"])] for x in self.cycles if x.get("end") and x["end"] >= today]
         out["spark"] = _thin(c["curve"][-90:], 45) if c and self.state in (STATE_RUNNING, STATE_FINISHING) else None
@@ -698,7 +740,7 @@ class Machine:
     def _cycle_out(self, c: dict[str, Any], language: str | None = None) -> dict[str, Any]:
         return {
             "id": c.get("id"), "at": c.get("at"), "start": dt_util.utc_from_timestamp(c["start"]).isoformat(),
-            "duration": c.get("duration"), "kwh": round(c["wh"] / 1000, 2), "cost": c.get("cost"),
+            "duration": c.get("duration"), "kwh": round(c["wh"] / 1000, 2), "cost": c.get("cost"), "saved": c.get("saved"),
             "program": self.program_name(c.get("program"), language), "program_id": c.get("program"),
             "by": c.get("by"), "clean": c.get("clean"), "reason": c.get("end_reason"), "resumed": c.get("resumed", 0),
             "curve": _thin(c.get("curve") or []),

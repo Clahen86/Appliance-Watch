@@ -1,5 +1,5 @@
 // Appliance Watch card: one machine, or all of them, animated - for any dashboard.
-import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, machineSVG, minutesLeft, money } from "./machines.js";
+import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, machineSVG, minutesLeft, money, watchText } from "./machines.js";
 
 const STATUS = (hass) => Object.values(hass.entities || {})
   .filter((e) => e.platform === "appliance_watch" && e.translation_key === "status" && hass.states[e.entity_id])
@@ -78,6 +78,7 @@ class ApplianceWatchCard extends HTMLElement {
   }
 
   _text(m, w, L) {
+    if (m.watched) return watchText(m, w);
     const active = m.state === "running" || m.state === "finishing";
     const left = minutesLeft(m.finish_time);
     let main, sub = "";
@@ -90,7 +91,8 @@ class ApplianceWatchCard extends HTMLElement {
     } else {
       main = w.states.off;
       sub = m.cheap ? `💡 ${w.cheap} ${clock(m.cheap.start)} · ${w.save} ${money(m.cheap.saving, m.currency)}`
-        : m.last ? [m.last.program, dur(m.last.duration, L), money(m.last.cost, m.currency)].filter(Boolean).map(esc).join(" · ") : "";
+        : m.last ? [m.last.program, dur(m.last.duration, L), money(m.last.cost, m.currency),
+          m.last.saved > 0.05 ? `${w.savedOne} ${money(m.last.saved, m.currency)}` : ""].filter(Boolean).map(esc).join(" · ") : "";
     }
     return { main, sub };
   }

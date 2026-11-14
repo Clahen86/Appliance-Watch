@@ -6,7 +6,7 @@
 |---|---|
 | **Languages** | English, Danish, German, Swedish, Norwegian, Dutch and French (panel, card, notifications, speakers, Assist). |
 | **Currency** | Any – taken from your price sensor's unit (kr, €, £, $ …). Works with Strømligning, Nord Pool, Energi Data Service, Tibber and other price sensors. No price sensor? Everything works, just without costs. |
-| **Machines** | Dishwasher, washing machine and dryer – any brand, via a smart plug that measures power (W). |
+| **Machines** | Dishwasher, washing machine, dryer, washer-dryer, 3D printer, airfryer/oven, coffee machine – and it watches a freezer/fridge and a dehumidifier. Any brand, via a smart plug that measures power (W). |
 
 ![Machines](docs/machines.png)
 
@@ -22,7 +22,9 @@ no motor) and the machine has only rested longer than its own programme ever pau
   after "done", the pause is learned and you get a correction.
 - **Programmes** – say once "that was Eco 50°", and it recognises it next time within the first minutes.
 - **Done at 14:35** – time left gets more exact while it runs (by time *and* energy used).
-- **Price** – what each cycle cost, and when starting would be cheaper (Strømligning, Nord Pool, Energi Data Service…).
+- **Price** – what each cycle cost, and when starting would be cheaper. Reads the same price integrations as Energy Pilot (Strømligning, Nord Pool, Energi Data Service, Tibber, Octopus, Amber, ENTSO-e …) or Energy Pilot's own full price; a spot price gets your grid tariff, taxes, a dearer period and VAT on top.
+- **Saved by timing** – "saved 4.20 kr" for a cycle started at a cheap time, and the month's total.
+- **Freezer and dehumidifier** – watched all day: a freezer that stopped (or never stops – door open?) and a dehumidifier with a full tank give an alert. In House Chat a stopped freezer rings like an alarm.
 - **Wear and faults** – "takes 20 % longer to heat than before – descale it", "stopped far earlier than usual",
   "has run unusually long".
 - **Notifications** – to whoever is home, with an *Emptied ✓* button, a reminder if nobody empties it, and
@@ -42,6 +44,8 @@ no motor) and the machine has only rested longer than its own programme ever pau
 ## The panel and the card
 
 ![Panel – light and dark](docs/panel.png)
+
+![The new machines](docs/new_machines.png)
 
 ![A machine and the settings](docs/detail.png)
 
@@ -64,10 +68,12 @@ You need a smart plug that measures power (W) on each machine.
 
 **Sprog:** dansk, engelsk, tysk, svensk, norsk, hollandsk og fransk. **Valuta:** alle – den tages fra din pris-sensors enhed (kr, €, £ …). Uden pris-sensor virker alt, bare uden priser.
 
+- **Maskiner:** opvasker, vaskemaskine, tørretumbler, vaske-tørremaskine, 3D-printer, airfryer/ovn og kaffemaskine – og den holder øje med fryser/køleskab og affugter (stoppet, kører uden pause, tanken fuld).
 - **Færdig når den er færdig** – lærer pauserne i hvert program; en dørsensor gør det øjeblikkeligt.
 - **Lærer aldrig af sine egne fejl** – kun vaske med en tydelig slutning bruges.
 - **Programmer** – sig én gang "det var Øko 50°", så kender den det næste gang.
-- **Færdig kl. 14:35**, **pris pr. vask** og **billigste starttidspunkt**.
+- **Færdig kl. 14:35**, **pris pr. vask** og **billigste starttidspunkt** – med samme pris-integrationer som Energipilot (eller Energipilots samlede pris), og nettarif, afgifter og moms oven i en spotpris.
+- **Sparet på tidspunktet** – "sparede 4,20 kr" pr. vask og månedens samlede.
 - **Slid og fejl** – fx "afkalk den" eller "stoppede meget tidligere end normalt".
 - **Besked** til den der er hjemme, med *Tømt ✓*, påmindelse og "flyt tøjet til tørretumbleren".
 - **Højttalere** – siger det højt (færdig, snart færdig, ikke tømt, flyt til tørretumbleren …), stille om natten.

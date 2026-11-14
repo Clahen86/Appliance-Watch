@@ -270,9 +270,14 @@ class Hub:
         found = []
         devices, entities = dr.async_get(self.hass), er.async_get(self.hass)
         taken = self.configured()
+        # A machine already set up under this name: a sensor with the same name is most often its old plug (replaced
+        # by a new one), not a second machine.
+        names = {e.title.strip().lower() for e in self.hass.config_entries.async_entries(DOMAIN)}
         for state in self.hass.states.async_all("sensor"):
             if state.attributes.get("device_class") != "power" or state.entity_id in taken:
                 continue
+            if state.state == "unavailable":
+                continue  # a dead or removed plug
             if state.attributes.get("unit_of_measurement") not in ("W", "kW"):
                 continue
             entry = entities.async_get(state.entity_id)
@@ -283,8 +288,10 @@ class Hub:
             kind = guess_kind(state.entity_id, state.attributes.get("friendly_name"), device_name)
             if kind == KIND_OTHER:
                 continue
-            found.append({"entity_id": state.entity_id, "kind": kind,
-                          "name": _clean_name(device_name or state.attributes.get("friendly_name") or state.entity_id)})
+            name = _clean_name(device_name or state.attributes.get("friendly_name") or state.entity_id)
+            if name.strip().lower() in names:
+                continue
+            found.append({"entity_id": state.entity_id, "kind": kind, "name": name})
         # One per device: its main power reading.
         seen, out = set(), []
         for f in sorted(found, key=lambda x: (x["name"], "apparent" in x["entity_id"], "reaktiv" in x["entity_id"])):
@@ -294,7 +301,14 @@ class Hub:
         return out
 
     async def async_discover(self) -> None:
-        for c in self.candidates():
+        cands = self.candidates()
+        # Suggestions that no longer fit (the plug was removed, or a machine took the name) are taken back.
+        keep = {c["entity_id"] for c in cands}
+        for flow in self.hass.config_entries.flow.async_progress_by_handler(DOMAIN):
+            ctx = flow.get("context") or {}
+            if ctx.get("source") == SOURCE_INTEGRATION_DISCOVERY and ctx.get("unique_id") not in keep:
+                self.hass.config_entries.flow.async_abort(flow["flow_id"])
+        for c in cands:
             await self.hass.config_entries.flow.async_init(
                 DOMAIN, context={"source": SOURCE_INTEGRATION_DISCOVERY},
                 data={CONF_POWER: c["entity_id"], CONF_KIND: c["kind"], "name": c["name"]},

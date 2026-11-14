@@ -1,7 +1,7 @@
 {
   "domain": "appliance_watch",
   "name": "Appliance Watch",
-  "after_dependencies": ["conversation", "mobile_app", "ai_task"],
+  "after_dependencies": ["ai_task", "conversation", "mobile_app", "recorder"],
   "codeowners": ["@Clahen86"],
   "config_flow": true,
   "dependencies": ["frontend", "http", "panel_custom", "repairs", "websocket_api"],

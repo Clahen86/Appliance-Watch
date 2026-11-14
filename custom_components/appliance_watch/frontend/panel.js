@@ -1,5 +1,5 @@
 // Appliance Watch panel: every machine as itself, live; history, programmes, settings.
-import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, LOCALES, machineSVG, minutesLeft, money, num } from "./machines.js";
+import { ACCENT, MACHINE_CSS, TEXTS, clock, display, dur, esc, hm, lang, LOCALES, machineSVG, minutesLeft, money, num, watchText } from "./machines.js";
 import { defineSupport, supportText } from "./support.js";
 
 // Programme names to pick from, per machine - only the ones that fit it.
@@ -548,7 +548,7 @@ class ApplianceWatchPanel extends HTMLElement {
     return `<div class="card m-${m.state}" style="--a:${ACCENT[m.kind] || ACCENT.other}" data-open="${m.entry_id}">
       <div class="art">${machineSVG(m.kind, m.state, { display: display(m), uid: m.entry_id.slice(-6) })}</div>
       <div class="info">
-        <div class="top"><div class="name">${esc(m.name)}</div><span class="state">${w.states[m.state]}</span></div>
+        <div class="top"><div class="name">${esc(m.name)}</div><span class="state">${m.watched && m.state !== "alert" ? "OK" : w.states[m.state]}</span></div>
         <div class="main">${s.main}</div><div class="sub muted">${esc(s.sub)}</div>
         ${bar}${m.spark ? `<div class="spark-live">${this._chart(m.spark, m.kind, 26, true)}</div>` : ""}<div class="chips">${chips}</div>
         ${m.state === "finished" ? `<button class="primary done" data-act="emptied" data-id="${m.entry_id}">✓ ${w.emptied}</button>` : ""}
@@ -1101,6 +1101,8 @@ class ApplianceWatchPanel extends HTMLElement {
         animation:in .3s ease both, orbit 3.5s linear infinite; box-shadow:0 12px 32px -14px color-mix(in srgb, var(--a) 65%, transparent); }
       @keyframes orbit { to { --ang:360deg; } }
       .grid .card.m-finished { border-color:#22c55e; animation:in .3s ease both, glowg 2.4s ease-in-out infinite; }
+      .grid .card.m-alert { border-color:#ef4444; box-shadow:0 0 0 4px rgba(239,68,68,.12); }
+      .grid .card.m-alert .state { background:rgba(239,68,68,.14); color:#ef4444; }
       @keyframes glowg { 0%,100% { box-shadow:0 0 0 0 rgba(34,197,94,.0), 0 10px 30px -14px rgba(34,197,94,.6); } 50% { box-shadow:0 0 0 6px rgba(34,197,94,.12), 0 10px 30px -14px rgba(34,197,94,.6); } }
       .art { width:120px; height:146px; }
       .name { font-size:18px; letter-spacing:-.01em; }

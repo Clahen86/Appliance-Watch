@@ -8,7 +8,7 @@
 | **Currency** | Any – taken from your price sensor's unit (kr, €, £, $ …). Works with Strømligning, Nord Pool, Energi Data Service, Tibber and other price sensors. No price sensor? Everything works, just without costs. |
 | **Machines** | Dishwasher, washing machine, dryer, washer-dryer, 3D printer, airfryer/oven, coffee machine – and it watches a freezer/fridge and a dehumidifier. Any brand, via a smart plug that measures power (W). |
 
-![Machines](docs/machines.png)
+![Appliance Watch](docs/showcase.png)
 
 Most "is it done?" integrations wait for a learned duration or for 0 W. A dishwasher that dries at 5–15 W for half an
 hour is then "running" long after it finished. Appliance Watch says done when the work is over (no heating, no pump,
@@ -43,13 +43,13 @@ no motor) and the machine has only rested longer than its own programme ever pau
 
 ## The panel and the card
 
-![Panel – light and dark](docs/panel.png)
+<p align="center"><img src="docs/panel.png" width="260" alt="The panel"> <img src="docs/panel_dark.png" width="260" alt="Dark theme"> <img src="docs/card.png" width="260" alt="The card"></p>
+
+![Every machine](docs/machines.png)
 
 ![The new machines](docs/new_machines.png)
 
 ![A machine and the settings](docs/detail.png)
-
-![Card](docs/card.png)
 
 Every machine drawn as itself and animated while it runs – the drum turns, water sloshes, a dryer glows, a dishwasher
 sprays and steams. The card comes with the integration: *Add card → Appliance Watch*, pick one machine or show them all.
@@ -82,4 +82,4 @@ You need a smart plug that measures power (W) on each machine.
 - **Assist** – "hvornår er opvaskeren færdig?"
 - **Panel og kort** med animerede maskiner.
 
-![Panel](docs/panel_da.png)
+<p align="center"><img src="docs/panel_da.png" width="300" alt="Panelet på dansk"></p>

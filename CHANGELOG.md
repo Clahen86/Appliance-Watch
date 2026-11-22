@@ -4,6 +4,7 @@ Newest first. Each version lists what changed since the one before.
 
 ## Unreleased
 
+- No more warning in Home Assistant's log at start-up (the version was read from disk in the event loop)
 - Store and update links open right inside Home Assistant
 - Error reports: a translated message shown on purpose (a refusal) is not reported as an error
 - Support: version from Home Assistant's loader, no blocking read in the event loop

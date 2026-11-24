@@ -7,6 +7,7 @@ period and VAT from the settings on top, so what a cycle cost is what it really 
 
 from __future__ import annotations
 
+from bisect import bisect_right
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -35,10 +36,11 @@ def parse(attrs: dict[str, Any], day0: datetime) -> dict[datetime, float]:
         if not isinstance(items, list) or not items:
             continue
         if all(isinstance(x, (int, float)) for x in items):  # a bare list, one per hour or quarter
-            base = day0 + timedelta(days=1 if "tomorrow" in key else 0)
-            step = timedelta(hours=24 / len(items)) if len(items) in (24, 23, 25, 96, 92, 100) else timedelta(hours=1)
+            # Counted in real time from midnight, so a day with 23 or 25 hours (summer time) lands on the right hours.
+            base = dt_util.as_utc(day0 + timedelta(days=1 if "tomorrow" in key else 0))
+            step = timedelta(minutes=15) if len(items) in (96, 92, 100) else timedelta(hours=1)
             for i, v in enumerate(items):
-                out[dt_util.as_utc(base + i * step)] = float(v) / (1000 if per_mwh else 1)
+                out[base + i * step] = float(v) / (1000 if per_mwh else 1)
             continue
         for item in items:
             if not isinstance(item, dict):
@@ -187,18 +189,22 @@ def _time(value: Any) -> datetime | None:
     return None
 
 
-def _price_at(rows: list[tuple[datetime, datetime, float]], when: datetime) -> float | None:
-    for start, end, price in rows:
-        if start <= when < end:
-            return price
+def _price_at(rows: list[tuple[datetime, datetime, float]], when: datetime,
+              starts: list[datetime] | None = None) -> float | None:
+    """The price at a time (rows in order: found by halving, not by going through them all)."""
+    i = bisect_right(starts if starts is not None else [r[0] for r in rows], when) - 1
+    if i >= 0 and when < rows[i][1]:
+        return rows[i][2]
     return None
 
 
-def cost_of(curve: list[float], start: datetime, rows: list[tuple[datetime, datetime, float]]) -> float | None:
+def cost_of(curve: list[float], start: datetime, rows: list[tuple[datetime, datetime, float]],
+            starts: list[datetime] | None = None) -> float | None:
     """What a cycle with this curve (Wh per minute) costs if started then. None when the prices don't reach."""
+    starts = starts if starts is not None else [r[0] for r in rows]
     total = 0.0
     for minute, wh in enumerate(curve):
-        price = _price_at(rows, start + timedelta(minutes=minute))
+        price = _price_at(rows, start + timedelta(minutes=minute), starts)
         if price is None:
             return None
         total += wh / 1000 * price
@@ -210,13 +216,14 @@ def cheapest(curve: list[float], rows: list[tuple[datetime, datetime, float]], h
     if not curve or not rows:
         return None
     now = dt_util.utcnow().replace(second=0, microsecond=0)
-    now_cost = cost_of(curve, now, rows)
+    starts = [r[0] for r in rows]
+    now_cost = cost_of(curve, now, rows, starts)
     if now_cost is None:
         return None
     best, best_cost = now, now_cost
     when = now + STEP - timedelta(minutes=now.minute % 15)
     while when < now + timedelta(hours=hours):
-        cost = cost_of(curve, when, rows)
+        cost = cost_of(curve, when, rows, starts)
         if cost is None:
             break
         if cost < best_cost - 1e-9:

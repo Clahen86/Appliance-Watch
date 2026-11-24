@@ -58,6 +58,10 @@ class Detector:
         self.after_bursts = 0
         self._burst: dict[str, float] | None = None
         self._unavailable_since: float | None = None
+        self._back_at: float | None = None  # when the reading came back after it was gone
+        self._door_at: float | None = None  # the door opened in a rest that might still be a pause
+        # Set from outside: how far the programme it is running has come (0-1), when it is known.
+        self.progress: float | None = None
         # Just emptied while still drying at a few watts: that isn't a new (quiet) programme.
         self._low_blocked = False
 
@@ -70,6 +74,11 @@ class Detector:
                 self._unavailable_since = t
             self.w = None
             return events + self._check(t)
+        if self._unavailable_since is not None:
+            # The reading is back: the time without one was no rest (Home Assistant restarting, Wi-Fi gone).
+            self._back_at = t
+            if self.cycle is not None and self.state in (STATE_RUNNING, STATE_FINISHING):
+                self.cycle["last_active"] = max(self.cycle["last_active"], t)
         self._unavailable_since = None
         if self.state == STATE_OFF and self.cycle is None and w < self.low_w:
             self.standby = w if self.standby is None else self.standby * 0.95 + w * 0.05
@@ -94,6 +103,9 @@ class Detector:
             events += self._finish(t, "door")
             self.door_opened = True
             return events + self._emptied("door")
+        if self.state in (STATE_RUNNING, STATE_FINISHING) and self.w is not None and self.w < self._act():
+            # Opened in a rest that may be a pause: if nothing happens after it before the end, it was emptied.
+            self._door_at = t
         return events  # opened in the middle of a programme (a forgotten cup): it goes on
 
     def switched_off(self, t: float) -> list[tuple[str, Any]]:
@@ -191,6 +203,7 @@ class Detector:
             c["phases"] += 1
         c["peak"] = max(c["peak"], w)
         c["last_active"] = t
+        self._door_at = None  # it went on: the door was opened in a pause
         if self.state == STATE_FINISHING:
             self.state = STATE_RUNNING
             events.append(("running", c))
@@ -233,6 +246,13 @@ class Detector:
         if quiet <= 0:
             return events
         if self._may_finish(t):
+            if self._door_at is not None and self._door_at >= c["last_active"]:
+                # The door was opened in this rest and nothing happened since: it was done, and emptied then.
+                events += self._finish(t, "door")
+                if self.state == STATE_FINISHED:
+                    self.door_opened = True
+                    events += self._emptied("door")
+                return events
             return events + self._finish(t, "quiet")
         heated = c["heat_s"] > 0 or not p.needs_heat or self._low()
         # "Nearly done" only after a rest longer than the programme's own pauses, so it doesn't flicker.
@@ -251,7 +271,9 @@ class Detector:
         quiet = t - c["last_active"]
         heated = c["heat_s"] > 0 or not p.needs_heat or self._low()
         if door:
-            return quiet >= 30 and heated and t - c["start"] >= p.min_cycle_s
+            # Not in a pause in the middle: only near the end it learned, or after a good part of the rest that means done.
+            near_end = (self.progress or 0.0) >= 0.8 or quiet >= 0.5 * self.end_quiet_s
+            return quiet >= 30 and heated and t - c["start"] >= p.min_cycle_s and near_end
         need = self.end_quiet_s if heated else max(self.end_quiet_s, 1200)
         if quiet < need:
             return False
@@ -279,6 +301,7 @@ class Detector:
         self.door_opened = reason == "door"
         self.after_bursts = 0
         self._burst = None
+        self._door_at = None
         return [("finished", c)]
 
     def _check_finished(self, t: float) -> list[tuple[str, Any]]:
@@ -287,7 +310,11 @@ class Detector:
         if b is not None:
             long_enough = b["last"] - b["t"] >= p.burst_s or b["wh"] >= 3 * START_WH or b["heat"]
             soon = b["t"] - self.finished_at <= RESUME_WINDOW_S
-            if long_enough and soon and not self.door_opened and c["end_reason"] in ("quiet", "forced"):
+            if c["end_reason"] == "power_lost":
+                # Running the moment the reading came back: it never stopped, the reading was only gone.
+                soon = soon or (self._back_at is not None and b["t"] - self._back_at <= 120
+                                and b["t"] - c["start"] < MAX_CYCLE_S)
+            if long_enough and soon and not self.door_opened and c["end_reason"] in ("quiet", "forced", "power_lost"):
                 return self._resume(t)
             if long_enough:
                 # A new programme: the last one was emptied without anyone telling.
@@ -308,7 +335,8 @@ class Detector:
         """It wasn't done: the rest it took is part of the programme."""
         c, b = self.cycle, self._burst
         assert c is not None and b is not None
-        c["gaps"].append(round(b["t"] - c["last_active"]))
+        if c["end_reason"] != "power_lost":  # time without a reading is no rest
+            c["gaps"].append(round(b["t"] - c["last_active"]))
         c["resumed"] += 1
         c["wh"] += b["wh"]
         c["last_active"] = b["last"]
@@ -333,6 +361,8 @@ class Detector:
         self.confirmed = False
         self.finished_at = None
         self._burst = None
+        self._door_at = None
+        self.progress = None
 
     # ---------- keeping it over a restart ----------
 
@@ -360,6 +390,8 @@ class Detector:
         if self.state in (STATE_RUNNING, STATE_FINISHING) and data.get("t"):
             self.cycle["lost_s"] += max(0.0, now - data["t"])
             self._unavailable_since = now
+        if self.state in (STATE_RUNNING, STATE_FINISHING):
+            self.cycle["last_active"] = max(self.cycle["last_active"], now)  # the time it was off is no rest
 
 
 def _spread(curve: list[float], a: float, b: float, w: float) -> None:

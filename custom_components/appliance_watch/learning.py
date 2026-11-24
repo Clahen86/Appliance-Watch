@@ -98,16 +98,30 @@ def stats(cycles: list[dict[str, Any]]) -> dict[str, Any] | None:
         "wh": median(c["wh"] for c in cycles),
         "heat_s": median(c.get("heat_s", 0) for c in cycles),
         "max_gap": max(gaps, default=0),
+        "gap": typical_gap(cycles),
         "cost": round(median(costs), 2) if costs else None,
     }
+
+
+def typical_gap(cycles: list[dict[str, Any]]) -> float:
+    """The longest rest a programme really takes - one long pause by the user (a door opened for an hour) shouldn't
+    make every later run wait that long: a rest counts when it was seen in more than one run (or in 1 of 10 runs)."""
+    longest = sorted((max(c.get("gaps") or [0]) for c in cycles), reverse=True)
+    if not longest:
+        return 0.0
+    if len(longest) == 1:
+        return float(longest[0])
+    if len(longest) < 10:
+        return float(longest[1])
+    return float(longest[len(longest) // 10])
 
 
 def end_quiet(profile: Profile, st: dict[str, Any] | None, machine_gap: float | None = None) -> float:
     """How long a rest means "done" for this programme (or this machine, while the programme isn't known)."""
     if st and st["count"] >= 2:
-        need = st["max_gap"] * 1.3 + 60
+        need = st["gap"] * 1.3 + 60
     elif st:
-        need = max(st["max_gap"] * 1.5 + 90, profile.end_quiet_s * 0.6)
+        need = max(st["gap"] * 1.5 + 90, profile.end_quiet_s * 0.6)
     elif machine_gap is not None:
         need = max(profile.end_quiet_s, machine_gap * 1.3 + 60)
     else:
@@ -145,10 +159,13 @@ def match_live(live: dict[str, Any], elapsed: float, programs: dict[str, list[di
 
 
 def remaining(live: dict[str, Any], elapsed: float, st: dict[str, Any]) -> float:
-    """Seconds left: where it is by time and by energy, together - the energy tells when it's ahead or behind."""
+    """Seconds left: where it is by time and by energy, together - the energy tells when it's ahead or behind.
+    0 once it runs past its usual length (or is all but there): "any minute", not a "1 min" that never ends."""
     by_time = elapsed / st["duration"] if st["duration"] else 0.0
     by_energy = live.get("wh", 0) / st["wh"] if st["wh"] else by_time
-    progress = min(0.99, max(0.0, 0.5 * by_time + 0.5 * by_energy))
+    progress = max(0.0, 0.5 * by_time + 0.5 * by_energy)
+    if by_time >= 1 or progress >= 0.99:
+        return 0.0
     return max(0.0, st["duration"] * (1 - progress))
 
 

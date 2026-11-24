@@ -36,3 +36,21 @@ def test_wear():
     for i, c in enumerate(old + new):
         c["start"] = i
     assert learning.wear(old + new)[0]["kind"] == "heat_slower"
+
+
+def test_one_long_pause_by_the_user_is_not_the_programme():
+    """One run paused for 25 min by hand mustn't make every later run wait half an hour before "done"."""
+    p = PROFILES["dishwasher"]
+    runs = [cycle({1, 2}, 50, gaps=(200,)) for _ in range(20)] + [cycle({1, 2}, 75, gaps=(200, 1500))]
+    quiet = learning.end_quiet(p, learning.stats(runs))
+    assert quiet < 600
+    # A rest the programme takes in most runs is learned
+    soak = [cycle({1, 2}, 90, gaps=(200, 900)) for _ in range(3)]
+    assert learning.end_quiet(p, learning.stats(soak)) > 900
+
+
+def test_past_its_usual_length_is_any_minute_now():
+    st = {"duration": 3000, "wh": 1000}
+    assert learning.remaining({"wh": 500}, 1500, st) == 1500
+    assert learning.remaining({"wh": 800}, 3100, st) == 0  # was stuck at a minute or more "left"
+    assert learning.remaining({"wh": 1100}, 2950, st) == 0

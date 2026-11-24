@@ -72,7 +72,7 @@ class ApplianceWatchCard extends HTMLElement {
       if (bar) bar.style.width = `${m.progress ?? 8}%`;
       const va = el.querySelector(".ring .va"), rb = el.querySelector(".ring b"), left = minutesLeft(m.finish_time);
       if (va) va.setAttribute("stroke-dashoffset", 169.6 * (1 - (m.progress || 0) / 100));
-      if (rb && left != null) rb.textContent = left >= 60 ? hm(left) : left;
+      if (rb && left != null) rb.textContent = left <= 1 ? "…" : left >= 60 ? hm(left) : left;
       el.querySelectorAll(".aw-display").forEach((d) => (d.textContent = display(m)));
     }
   }
@@ -104,7 +104,7 @@ class ApplianceWatchCard extends HTMLElement {
     const left = minutesLeft(m.finish_time);
     const ring = single && active && m.finish_time ? `<div class="ring"><svg viewBox="0 0 64 64"><circle class="tr" cx="32" cy="32" r="27"/>
       <circle class="va" cx="32" cy="32" r="27" stroke-dasharray="169.6" stroke-dashoffset="${169.6 * (1 - (m.progress || 0) / 100)}"/></svg>
-      <b>${left >= 60 ? hm(left) : left}</b></div>` : "";
+      <b>${left <= 1 ? "…" : left >= 60 ? hm(left) : left}</b></div>` : "";
     return `<div class="m s-${m.state}" style="--a:${m.state === "finished" ? "#22c55e" : ACCENT[m.kind] || ACCENT.other}" data-more="${m.entity_id}">${ring}
       <div class="art">${machineSVG(m.kind, m.state, { display: display(m), uid: m.entity_id.replace(/\W/g, "").slice(-10) })}</div>
       <div class="txt"><div class="name">${esc(m.name || w.kinds[m.kind])}</div>

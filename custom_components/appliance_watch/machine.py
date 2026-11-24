@@ -38,7 +38,6 @@ from .const import (
     SET_CHEAP,
     SET_FINISH_AFTER_DRY,
     SET_NOTIFY_START,
-    SET_PRICE,
     SET_REMIND,
     SIGNAL_UPDATE,
     STATE_FINISHED,
@@ -76,13 +75,18 @@ class Machine:
         self.progress: float | None = None
         self.power: float | None = None
         self.cheap: dict[str, Any] | None = None
-        self.notified_done: float | None = None
+        self.notified_done: float | None = None  # when the "done" push went out (None: it didn't)
+        self.held: dict[str, Any] | None = None  # a push waiting for the quiet hours to end
+        self.alert_pushed = False  # the watched machine's alert push went out: then "works again" too
         self.imported = False
         self.deleted: list[float] = []
         self._last_wh = 0.0
         self._saved = 0.0
         self._unsubs: list[Any] = []
         self._remind_cancel: Any = None
+        self._learn_task: Any = None
+        self._cheap_key: Any = None
+        self._stopped = False
 
     # ---------- what it is ----------
 
@@ -136,11 +140,13 @@ class Machine:
         self.programs = data.get("programs", {})
         self.findings = data.get("findings", [])
         self.notified_done = data.get("notified_done")
+        self.held = data.get("held")
+        self.alert_pushed = bool(data.get("alert_pushed"))
         self.imported = bool(data.get("imported"))
         self.deleted: list[float] = data.get("deleted", [])
         self.detector.load(data.get("detector"), time.time())
         if self.watcher:
-            self.watcher.load(data.get("watcher"))
+            self.watcher.load(data.get("watcher"), time.time())
             self.imported = True  # nothing to learn from the history: there are no programmes
         self.detector.finish_after_drying = bool(self.hub.settings.get(SET_FINISH_AFTER_DRY))
         self._last_wh = (self.detector.cycle or {}).get("wh", 0.0)
@@ -156,11 +162,13 @@ class Machine:
                 self._watched(self.watcher.sample(time.time(), w))
             else:
                 self._handle(self.detector.sample(time.time(), w))
+        self._update_cheap()
         self._refresh()
         if not self.imported:
             # A new machine learns from the power readings Home Assistant has, once - after that the history is the
             # user's (what they delete stays deleted).
-            self.hass.async_create_background_task(self.async_learn_history(), f"{DOMAIN} learn {self.name}")
+            self._learn_task = self.hass.async_create_background_task(
+                self.async_learn_history(), f"{DOMAIN} learn {self.name}")
 
     async def async_learn_history(self, days: int = 10) -> int:
         """Find the cycles in the recorded power readings and learn from them. Returns how many were added."""
@@ -177,6 +185,8 @@ class Machine:
         except Exception:  # noqa: BLE001 - no history: it learns as it goes
             _LOGGER.debug("No history for %s", power, exc_info=True)
             return 0
+        if self._stopped:
+            return 0  # removed or reloaded meanwhile: nothing to keep
         now_state = self.hass.states.get(power)
         attrs = now_state.attributes if now_state else {}
         d = Detector(self.profile, self.detector.standby)
@@ -217,6 +227,9 @@ class Machine:
         return added
 
     async def async_stop(self) -> None:
+        self._stopped = True
+        if self._learn_task is not None and not self._learn_task.done():
+            self._learn_task.cancel()  # still going through the history: it mustn't save after the machine is gone
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
@@ -232,6 +245,7 @@ class Machine:
         await self.store.async_save({
             "cycles": self.cycles[-CYCLES_KEPT:], "programs": self.programs, "findings": self.findings,
             "detector": self.detector.dump(), "notified_done": self.notified_done, "imported": self.imported,
+            "held": self.held, "alert_pushed": self.alert_pushed,
             "deleted": self.deleted[-100:], "watcher": self.watcher.dump() if self.watcher else None,
         })
 
@@ -265,6 +279,7 @@ class Machine:
             self._refresh()
             return
         self._handle(self.detector.tick(time.time()))
+        self._update_cheap()
         self._refresh()
         if self.state != STATE_OFF:
             self._schedule_save()
@@ -303,7 +318,17 @@ class Machine:
                                                    "reason": reason, "ok": what == "ok"})
             key = f"alert_{reason}" if what == "alert" else "alert_ok"
             title = t(self.hass, f"{key}_title", icon=ICONS.get(self.kind, ""), name=self.name)
-            self.hass.async_create_task(self.hub.async_notify(self, title, t(self.hass, key, name=self.name)), eager_start=False)
+            if what == "alert":  # an alarm goes at once, also at night
+                self.hass.async_create_task(self._push_alert(title, t(self.hass, key, name=self.name)), eager_start=False)
+            elif self.alert_pushed:  # "works again" only to those told it didn't (same tag: it replaces the alarm)
+                self.alert_pushed = False
+                self.hass.async_create_task(self.hub.async_notify(self, title, t(self.hass, key, name=self.name)),
+                                            eager_start=False)
+            self._schedule_save(True)
+
+    async def _push_alert(self, title: str, message: str) -> None:
+        if await self.hub.async_notify(self, title, message):
+            self.alert_pushed = True
             self._schedule_save(True)
 
     def _started(self, cycle: dict[str, Any]) -> None:
@@ -311,7 +336,7 @@ class Machine:
         cycle["meter_start"] = self._meter()
         cycle["cost"] = 0.0 if self._price()[0] is not None else None
         # What a usual hour costs from now (the next 24 h known): "saved" compares the cycle with it.
-        rows = [r for r in prices.forecast(self.hass, self.hub.settings) if (r[0] - dt_util.utcnow()).total_seconds() < 24 * 3600]
+        rows = [r for r in self.hub.price_info()[3] if (r[0] - dt_util.utcnow()).total_seconds() < 24 * 3600]
         cycle["ref_price"] = round(sum(r[2] for r in rows) / len(rows), 4) if len(rows) >= 6 else None
         self._last_wh = 0.0
         self._count_cost()
@@ -353,10 +378,13 @@ class Machine:
             "program": self.program_name(cycle["program"]), "duration": cycle["duration"],
             "energy_kwh": round(cycle["wh"] / 1000, 3), "cost": cycle.get("cost"),
         })
-        self.notified_done = time.time()
-        self.hass.async_create_task(self._notify_done(cycle), eager_start=False)
-        self.hass.async_create_task(self._say_done(cycle), eager_start=False)
-        self._remind_later()
+        self.notified_done = None
+        if cycle["end_reason"] not in ("power_lost", "door"):
+            # Not when the reading was lost (that has its own notice) or the door was opened (someone is there).
+            self.hass.async_create_task(self._notify_done(cycle), eager_start=False)
+            self.hass.async_create_task(self._say_done(cycle), eager_start=False)
+            if not cycle.get("reminded"):  # one reminder per cycle, also when it went on and finished again
+                self._remind_later()
         self._schedule_save(True)
 
     def _resumed(self, cycle: dict[str, Any]) -> None:
@@ -370,10 +398,16 @@ class Machine:
         if self._remind_cancel:
             self._remind_cancel()
             self._remind_cancel = None
-        if self.notified_done and time.time() - self.notified_done < 3600:
+        if self.held is not None:
+            self.held = None  # "done" waited for the morning and it wasn't done: nothing to take back
+        elif self.notified_done and time.time() - self.notified_done < 3600:
+            # Only to those told it was done; the same tag replaces that push.
             self.hass.async_create_task(self.hub.async_notify(
                 self, t(self.hass, "resumed_title", icon=ICONS.get(self.kind, ""), name=self.name),
-                t(self.hass, "resumed")), eager_start=False)
+                t(self.hass, "resumed"), hold="resumed"), eager_start=False)
+        if self.findings:
+            # It went on after the reading was lost: that wasn't a fault in the end.
+            self.findings = [f for f in self.findings if not (f.get("cycle") == cycle.get("id") and f["kind"] == "power_lost")]
         self.notified_done = None
         self._update_quiet()
         self._schedule_save(True)
@@ -383,6 +417,7 @@ class Machine:
             self._remind_cancel()
             self._remind_cancel = None
         self.notified_done = None
+        self.held = None  # emptied: what waited for the morning doesn't matter any more
         self.hass.bus.async_fire(EVENT_EMPTIED, {"entry_id": self.entry.entry_id, "name": self.name})
         self.hub.speaker.morning.discard(self.entry.entry_id)
         if how in ("door", "button"):  # someone did it - not when it's assumed after hours
@@ -419,6 +454,8 @@ class Machine:
                 self.progress = round(min(99.0, 100 * elapsed / max(1.0, elapsed + left)), 1)
             else:
                 self.finish_time, self.progress = None, None
+            # How far it has come, for the door: opened near the end it is emptied, earlier it is a pause.
+            self.detector.progress = self.progress / 100 if self.progress is not None and self.live_score >= learning.LIVE_SURE else None
             self._say_live(c, elapsed)
             problem = learning.fault(c, st, elapsed)
             if problem and not any(f.get("live") == c.get("id") for f in self.findings):
@@ -427,14 +464,15 @@ class Machine:
             self.finish_time, self.progress = None, 100.0
         else:
             self.finish_time, self.progress = None, None
-        self.cheap = self._cheapest() if self.state == STATE_OFF else None
+        if self.state != STATE_OFF:
+            self.cheap, self._cheap_key = None, None
         async_dispatcher_send(self.hass, SIGNAL_UPDATE.format(self.entry.entry_id))
         self.hub.async_changed()
 
     def _update_quiet(self) -> None:
         st = self.program_stats(self.live_program)
         clean = [c for c in self.cycles if c.get("clean")]
-        machine_gap = max((g for c in clean for g in c.get("gaps", [])), default=0) if len(clean) >= 3 else None
+        machine_gap = learning.typical_gap(clean) if len(clean) >= 3 else None
         quiet = learning.end_quiet(self.profile, st, machine_gap)
         c = self.live
         if st and c is not None and self.live_score >= learning.LIVE_SURE and st["count"] >= 2:
@@ -454,7 +492,8 @@ class Machine:
             c["cost"] += delta / 1000 * price
 
     def _price(self) -> tuple[float | None, str | None]:
-        return prices.current(self.hass, self.hub.settings)
+        _key, price, currency, _rows = self.hub.price_info()
+        return price, currency
 
     @property
     def currency(self) -> str | None:
@@ -484,15 +523,27 @@ class Machine:
                 cycle["cost"] *= scale
             cycle["wh"] = wh
 
+    def _update_cheap(self) -> None:
+        """Worked out on the tick, once per quarter hour (or when the prices or the last cycle change) - not on every
+        power reading."""
+        if self.state != STATE_OFF:
+            return
+        key = (self.hub.price_info()[0], self.cycles[-1].get("id") if self.cycles else None,
+               self.hub.settings.get(SET_CHEAP), len(self.programs))
+        if key != self._cheap_key:
+            self._cheap_key = key
+            self.cheap = self._cheapest()
+
     def _cheapest(self) -> dict[str, Any] | None:
         """For a machine that is off: when its usual programme would be cheapest to start."""
-        if not self.cycles or not (self.hub.settings.get(SET_PRICE) or prices.energy_pilot(self.hass)):
+        _key, _price, _currency, rows = self.hub.price_info()
+        if not self.cycles or not rows:
             return None
         pid = next((c.get("program") for c in reversed(self.cycles) if c.get("program")), None)
         ref = next((c for c in reversed(self.cycles) if c.get("program") == pid and c.get("clean")), None)
         if ref is None:
             return None
-        found = prices.cheapest(ref["curve"], prices.forecast(self.hass, self.hub.settings))
+        found = prices.cheapest(ref["curve"], rows)
         if found is None or found["saving"] < float(self.hub.settings.get(SET_CHEAP) or 0):
             return None
         return {**found, "program": self.program_name(pid)}
@@ -614,9 +665,37 @@ class Machine:
         text = self.details(cycle)
         if self.kind == KIND_WASHER and any(m.kind == KIND_DRYER for m in self.hub.machines.values()):
             text += "\n" + t(self.hass, "move_to_dryer")
-        await self.hub.async_notify(
-            self, t(self.hass, "done_title", icon=ICONS.get(self.kind, ""), name=self.name), text, emptied=True
-        )
+        if await self.hub.async_notify(
+            self, t(self.hass, "done_title", icon=ICONS.get(self.kind, ""), name=self.name), text, emptied=True, hold="done"
+        ):
+            self.notified_done = time.time()
+
+    @callback
+    def hold_push(self, kind: str, title: str, message: str, emptied: bool) -> None:
+        """A push in the quiet hours: kept (over a restart too) until they end - only the latest for this machine."""
+        cycle = self.detector.cycle
+        self.held = {"kind": kind, "title": title, "message": message, "emptied": emptied,
+                     "cycle": cycle.get("id") if cycle else None}
+        self._schedule_save(True)
+
+    async def async_send_held(self) -> None:
+        """The quiet hours are over: send what waited, if it still matters (not emptied, the same cycle)."""
+        held, self.held = self.held, None
+        if held is None:
+            return
+        cycle = self.detector.cycle
+        same = cycle is not None and cycle.get("id") == held.get("cycle")
+        if held["kind"] in ("done", "remind"):
+            matters = same and self.state == STATE_FINISHED
+        else:  # "start", "resumed": only while it still runs
+            matters = same and self.state in (STATE_RUNNING, STATE_FINISHING)
+        message = held["message"]
+        if matters and held["kind"] == "remind" and self.detector.finished_at:
+            message = t(self.hass, "remind", minutes=round((time.time() - self.detector.finished_at) / 60))
+        if matters and await self.hub.async_notify(self, held["title"], message, emptied=held["emptied"]):
+            if held["kind"] in ("done", "remind"):
+                self.notified_done = time.time()
+        self._schedule_save(True)
 
     async def _say_done(self, cycle: dict[str, Any]) -> None:
         sp = self.hub.speaker
@@ -654,7 +733,7 @@ class Machine:
 
     async def _notify_start(self) -> None:
         await self.hub.async_notify(self, t(self.hass, "start_title", icon=ICONS.get(self.kind, ""), name=self.name),
-                                    self.program_name(self.live_program) or "")
+                                    self.program_name(self.live_program) or "", hold="start")
 
     def _remind_later(self) -> None:
         minutes = int(self.hub.settings.get(SET_REMIND) or 0)
@@ -667,10 +746,13 @@ class Machine:
         @callback
         def remind(_now: datetime) -> None:
             self._remind_cancel = None
-            if self.state == STATE_FINISHED:
+            c = self.detector.cycle
+            # Once per cycle, and not when the door was opened (someone has seen it).
+            if self.state == STATE_FINISHED and c is not None and not c.get("reminded") and not self.detector.door_opened:
+                c["reminded"] = True
                 self.hass.async_create_task(self.hub.async_notify(
                     self, t(self.hass, "remind_title", icon=ICONS.get(self.kind, ""), name=self.name),
-                    t(self.hass, "remind", minutes=minutes), emptied=True), eager_start=False)
+                    t(self.hass, "remind", minutes=minutes), emptied=True, hold="remind"), eager_start=False)
                 self.hass.async_create_task(self.hub.speaker.async_say(self, "remind", t(
                     self.hass, "say_remind", name=self.name, waited=spoken_wait(self.hass, minutes))), eager_start=False)
 

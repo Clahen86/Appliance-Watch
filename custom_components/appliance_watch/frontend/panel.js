@@ -69,7 +69,7 @@ const T = {
       kinds: { done: ["Done", "The dishwasher is done. It cost 2.10."], soon: ["Nearly done", "…is done in 10 minutes."],
         remind: ["Not emptied", "…has been waiting an hour."], dryer: ["Move to the dryer", "Move the laundry to the dryer."],
         emptied: ["Emptied", "Thank you! …is ready again."], started: ["Started", "…is done at about 22:15."] },
-      quiet: "Quiet at night", quietHint: "What finishes in the night is said in the morning instead.", from: "From", to: "To",
+      quiet: "Quiet at night", quietHint: "What finishes in the night is said – and sent to the phones – in the morning instead. Alarms still go at once.", from: "From", to: "To",
       home: "Only when someone is home", homeHint: "Nobody talks to an empty house.", voice: "Voice", defaultVoice: "Standard",
       test: "Try it", playing: "Playing…", noSpeaker: "Pick a speaker first", own: "Speaker for this machine", asDefault: "As chosen under ⚙️",
     },
@@ -102,7 +102,7 @@ const T = {
       kinds: { done: ["Færdig", "Opvaskeren er færdig. Det kostede 2,10 kr."], soon: ["Snart færdig", "…er færdig om 10 minutter."],
         remind: ["Ikke tømt", "…har ventet i en time."], dryer: ["Flyt til tørretumbler", "Flyt tøjet over i tørretumbleren."],
         emptied: ["Tømt", "Tak! …er klar igen."], started: ["Startet", "…er færdig cirka 22:15."] },
-      quiet: "Stille om natten", quietHint: "Det der bliver færdigt om natten, siges om morgenen i stedet.", from: "Fra", to: "Til",
+      quiet: "Stille om natten", quietHint: "Det der bliver færdigt om natten, siges – og sendes til telefonerne – om morgenen i stedet. Alarmer kommer stadig med det samme.", from: "Fra", to: "Til",
       home: "Kun når nogen er hjemme", homeHint: "Ingen grund til at tale til et tomt hus.", voice: "Stemme", defaultVoice: "Standard",
       test: "Prøv", playing: "Afspiller…", noSpeaker: "Vælg en højttaler først", own: "Højttaler til denne maskine", asDefault: "Som valgt under ⚙️",
     },
@@ -135,7 +135,7 @@ const T = {
       kinds: { done: ["Fertig", "Der Geschirrspüler ist fertig. Es hat 2,10 gekostet."], soon: ["Fast fertig", "…ist in 10 Minuten fertig."],
         remind: ["Nicht ausgeräumt", "…wartet seit einer Stunde."], dryer: ["In den Trockner", "Die Wäsche in den Trockner geben."],
         emptied: ["Ausgeräumt", "Danke! …ist wieder bereit."], started: ["Gestartet", "…ist gegen 22:15 fertig."] },
-      quiet: "Nachts leise", quietHint: "Was nachts fertig wird, wird stattdessen am Morgen gesagt.", from: "Von", to: "Bis",
+      quiet: "Nachts leise", quietHint: "Was nachts fertig wird, wird stattdessen am Morgen gesagt – und ans Handy geschickt. Alarme kommen weiterhin sofort.", from: "Von", to: "Bis",
       home: "Nur wenn jemand zu Hause ist", homeHint: "Niemand redet mit einem leeren Haus.", voice: "Stimme", defaultVoice: "Standard",
       test: "Ausprobieren", playing: "Spielt…", noSpeaker: "Wähle zuerst einen Lautsprecher", own: "Lautsprecher für dieses Gerät", asDefault: "Wie unter ⚙️ gewählt",
     },
@@ -168,7 +168,7 @@ const T = {
       kinds: { done: ["Klar", "Diskmaskinen är klar. Det kostade 2,10 kr."], soon: ["Snart klar", "…är klar om 10 minuter."],
         remind: ["Inte tömd", "…har väntat i en timme."], dryer: ["Flytta till torktumlaren", "Flytta tvätten till torktumlaren."],
         emptied: ["Tömd", "Tack! …är redo igen."], started: ["Startad", "…är klar runt 22:15."] },
-      quiet: "Tyst på natten", quietHint: "Det som blir klart på natten sägs på morgonen i stället.", from: "Från", to: "Till",
+      quiet: "Tyst på natten", quietHint: "Det som blir klart på natten sägs – och skickas till telefonerna – på morgonen i stället. Larm kommer ändå direkt.", from: "Från", to: "Till",
       home: "Bara när någon är hemma", homeHint: "Ingen idé att prata med ett tomt hus.", voice: "Röst", defaultVoice: "Standard",
       test: "Prova", playing: "Spelar…", noSpeaker: "Välj en högtalare först", own: "Högtalare för den här maskinen", asDefault: "Som valt under ⚙️",
     },
@@ -201,7 +201,7 @@ const T = {
       kinds: { done: ["Ferdig", "Oppvaskmaskinen er ferdig. Det kostet 2,10 kr."], soon: ["Snart ferdig", "…er ferdig om 10 minutter."],
         remind: ["Ikke tømt", "…har ventet i en time."], dryer: ["Flytt til tørketrommelen", "Flytt klærne over i tørketrommelen."],
         emptied: ["Tømt", "Takk! …er klar igjen."], started: ["Startet", "…er ferdig rundt 22:15."] },
-      quiet: "Stille om natten", quietHint: "Det som blir ferdig om natten, sies om morgenen i stedet.", from: "Fra", to: "Til",
+      quiet: "Stille om natten", quietHint: "Det som blir ferdig om natten, sies – og sendes til telefonene – om morgenen i stedet. Alarmer kommer fortsatt med en gang.", from: "Fra", to: "Til",
       home: "Bare når noen er hjemme", homeHint: "Ingen vits å snakke til et tomt hus.", voice: "Stemme", defaultVoice: "Standard",
       test: "Prøv", playing: "Spiller…", noSpeaker: "Velg en høyttaler først", own: "Høyttaler for denne maskinen", asDefault: "Som valgt under ⚙️",
     },
@@ -234,7 +234,7 @@ const T = {
       kinds: { done: ["Klaar", "De vaatwasser is klaar. Het kostte 2,10."], soon: ["Bijna klaar", "…is over 10 minuten klaar."],
         remind: ["Niet uitgeruimd", "…wacht al een uur."], dryer: ["Naar de droger", "Doe de was in de droger."],
         emptied: ["Uitgeruimd", "Dank je! …is weer klaar voor gebruik."], started: ["Gestart", "…is rond 22:15 klaar."] },
-      quiet: "Stil 's nachts", quietHint: "Wat 's nachts klaar is, wordt in plaats daarvan 's ochtends gezegd.", from: "Van", to: "Tot",
+      quiet: "Stil 's nachts", quietHint: "Wat 's nachts klaar is, wordt in plaats daarvan 's ochtends gezegd – en naar de telefoons gestuurd. Alarmen komen nog steeds meteen.", from: "Van", to: "Tot",
       home: "Alleen als er iemand thuis is", homeHint: "Niemand praat tegen een leeg huis.", voice: "Stem", defaultVoice: "Standaard",
       test: "Probeer", playing: "Speelt af…", noSpeaker: "Kies eerst een speaker", own: "Speaker voor dit apparaat", asDefault: "Zoals gekozen bij ⚙️",
     },
@@ -267,7 +267,7 @@ const T = {
       kinds: { done: ["Terminé", "Le lave-vaisselle est terminé. Ça a coûté 2,10."], soon: ["Bientôt terminé", "…sera terminé dans 10 minutes."],
         remind: ["Pas vidé", "…attend depuis une heure."], dryer: ["Au sèche-linge", "Mettez le linge dans le sèche-linge."],
         emptied: ["Vidé", "Merci ! …est de nouveau prêt."], started: ["Démarré", "…sera terminé vers 22:15."] },
-      quiet: "Silence la nuit", quietHint: "Ce qui se termine la nuit est annoncé le matin à la place.", from: "De", to: "À",
+      quiet: "Silence la nuit", quietHint: "Ce qui se termine la nuit est annoncé – et envoyé aux téléphones – le matin à la place. Les alarmes partent toujours tout de suite.", from: "De", to: "À",
       home: "Seulement si quelqu'un est là", homeHint: "Inutile de parler à une maison vide.", voice: "Voix", defaultVoice: "Standard",
       test: "Essayer", playing: "Lecture…", noSpeaker: "Choisissez d'abord une enceinte", own: "Enceinte pour cet appareil", asDefault: "Comme choisi dans ⚙️",
     },
@@ -464,7 +464,7 @@ class ApplianceWatchPanel extends HTMLElement {
     if (run) {
       const left = minutesLeft(run.finish_time);
       return { kicker: today, title: run.finish_time ? `${esc(run.name)} ${w.doneAt} ${clock(run.finish_time)}` : `${esc(run.name)} ${t.isRunning}`,
-        sub: run.finish_time ? `${hm(left)} ${w.left}${run.program ? " · " + esc(run.program) : ""}` : w.unknownTime, color: ACCENT[run.kind], m: run };
+        sub: run.finish_time ? `${left <= 1 ? t.soon : hm(left) + " " + w.left}${run.program ? " · " + esc(run.program) : ""}` : w.unknownTime, color: ACCENT[run.kind], m: run };
     }
     return { kicker: today, title: t.allReady, sub: ms.length ? t.readySub : "", color: "#6366f1" };
   }
@@ -666,7 +666,7 @@ class ApplianceWatchPanel extends HTMLElement {
     const r = 52, c = 2 * Math.PI * r, p = m.progress ?? 0, left = minutesLeft(m.finish_time);
     return `<div class="ring"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="${r}"/>
       <circle class="val" id="ringval" cx="60" cy="60" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - p / 100)}"/></svg>
-      <div class="rt"><b id="left">${left == null ? "…" : left >= 60 ? hm(left) : left}</b><span>${left == null || left >= 60 ? "" : "min"}</span></div></div>`;
+      <div class="rt"><b id="left">${left == null || left <= 1 ? "…" : left >= 60 ? hm(left) : left}</b><span>${left == null || left <= 1 || left >= 60 ? "" : "min"}</span></div></div>`;
   }
 
   _chart(values, kind, height, small = false) {
@@ -688,7 +688,7 @@ class ApplianceWatchPanel extends HTMLElement {
     const ring = r.getElementById("ringval");
     if (ring) ring.setAttribute("stroke-dashoffset", 2 * Math.PI * 52 * (1 - (m.progress || 0) / 100));
     const left = minutesLeft(m.finish_time);
-    set("left", left == null ? "…" : left >= 60 ? hm(left) : String(left));
+    set("left", left == null || left <= 1 ? "…" : left >= 60 ? hm(left) : String(left));
     r.querySelectorAll(".aw-display").forEach((el) => (el.textContent = display(m)));
   }
 

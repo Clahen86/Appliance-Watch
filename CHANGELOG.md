@@ -2,12 +2,26 @@
 
 Newest first. Each version lists what changed since the one before.
 
-## Unreleased
+## 0.9.0 – 2026-11-24
 
 - No more warning in Home Assistant's log at start-up (the version was read from disk in the event loop)
 - Store and update links open right inside Home Assistant
 - Error reports: a translated message shown on purpose (a refusal) is not reported as an error
 - Support: version from Home Assistant's loader, no blocking read in the event loop
+- Time without a power reading (a restart, Wi-Fi gone) no longer counts as a rest, so a cycle isn't called done early
+- A machine still running when its reading comes back after half an hour goes on as the same cycle, and a lost reading gives no "done" push
+- Prices and the cheapest start are worked out once per quarter hour (or when the price changes), not on every power reading – much less CPU
+- Opening the door in a pause mid-programme no longer ends the cycle; near the end (or later in the rest) it still does, and a door opened at the end with nothing after it counts as emptied
+- Freezer and fridge: learns its own running level and its longest normal runs and rests – no false "runs without a break" from inverter compressors, and no alarm right after a long Home Assistant restart
+- Dehumidifier: learns how it rests at its target humidity, so "tank full" only comes when the quiet is unlike that
+- One long pause by hand no longer makes every later run wait up to 30 minutes before "done"
+- Bare price lists land on the right hours on the days summer time starts and ends
+- Past its usual length a running machine shows "any minute" instead of a "1 min" that never ends
+- Machine names: "blender" is no 3D printer, "plug four" no oven
+- Learning from the history stops when the machine is removed
+- Phone pushes keep to the quiet hours: "done", "not emptied", "started" and "still running" wait for the morning (only the latest per machine, nothing if it was emptied meanwhile); alarms still go at once
+- "Still running" and "works again" are only sent after the push they correct, and replace it
+- At most one "not emptied" reminder per cycle, none once the door was opened, and no "done" push when the door ends the cycle
 
 ## 0.8.0 – 2026-11-14
 

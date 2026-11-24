@@ -124,9 +124,101 @@ def test_door_ends_and_empties():
     d.sample(t, 8)
     t += 60
     d.tick(t)
+    # Right after the work stopped it may be a pause: nothing yet - and nothing more happens, so it was done then.
     events = d.door(t, True)
-    assert [e for e, _ in events] == ["finished", "emptied"]
+    assert events == [] and d.state == STATE_RUNNING
+    for _ in range(20):
+        t += 30
+        events += d.tick(t)
+    assert [e for e, _ in events if e != "finishing"] == ["finished", "emptied"]
+    assert [c for e, c in events if e == "finished"][0]["end_reason"] == "door"
     assert d.state == STATE_OFF
+    # Later in the rest (half the quiet that means done) the door ends it at once.
+    d.sample(t, 1900)
+    for _ in range(40):
+        t += 30
+        d.tick(t)
+    d.sample(t, 8)
+    for _ in range(12):
+        t += 30
+        d.tick(t)
+    assert [e for e, _ in d.door(t, True)] == ["finished", "emptied"]
+
+
+def test_door_in_a_pause_after_the_minimum_is_ignored():
+    """A mid-programme pause (long enough to pass the minimum length): the door is a forgotten cup, not the end."""
+    d = Detector(PROFILES["dishwasher"])
+    t = 3_500_000.0
+    events = d.sample(t, 1900)
+    for _ in range(40):
+        t += 30
+        events += d.tick(t)
+    events += d.sample(t, 8)
+    for _ in range(2):
+        t += 30
+        events += d.tick(t)
+    events += d.door(t, True)
+    assert d.state == STATE_RUNNING
+    t += 60
+    events += d.sample(t, 1900)  # it goes on
+    for _ in range(20):
+        t += 30
+        events += d.tick(t)
+    assert not any(e in ("finished", "emptied") for e, _ in events)
+    d.progress = 0.85  # near the end it learned: the door ends it
+    d.sample(t, 8)
+    t += 60
+    d.tick(t)
+    assert [e for e, _ in d.door(t, True)] == ["finished", "emptied"]
+
+
+def test_time_without_readings_is_no_rest():
+    """Home Assistant restarting or Wi-Fi gone mid-programme: when the reading comes back the cycle isn't done."""
+    p = PROFILES["washer"]
+    d = Detector(p)
+    t = 6_500_000.0
+    events = d.sample(t, 400)
+    for _ in range(40):
+        t += 30
+        events += d.tick(t)
+    events += d.sample(t, None)
+    for _ in range(40):  # 20 min without a reading
+        t += 30
+        events += d.tick(t)
+    events += d.sample(t, 5)  # back, resting between two steps
+    t += 30
+    events += d.tick(t)
+    assert not any(e == "finished" for e, _ in events)
+    # Over a restart too: the time Home Assistant was off is no rest.
+    saved = d.dump()
+    d2 = Detector(p)
+    t += 3600
+    d2.load(saved, t)
+    evs = d2.sample(t, 5)
+    t += 30
+    evs += d2.tick(t)
+    assert not any(e == "finished" for e, _ in evs) and d2.state == STATE_RUNNING
+
+
+def test_reading_gone_for_long_but_still_running_goes_on():
+    """After half an hour without a reading it ends as 'power lost' - if it runs when the reading is back, same cycle."""
+    d = Detector(PROFILES["washer"])
+    t = 6_800_000.0
+    events = d.sample(t, 400)
+    for _ in range(40):
+        t += 30
+        events += d.tick(t)
+    events += d.sample(t, None)
+    for _ in range(100):  # 50 min
+        t += 30
+        events += d.tick(t)
+    assert [c["end_reason"] for e, c in events if e == "finished"] == ["power_lost"]
+    events = d.sample(t, 400)
+    for _ in range(20):
+        t += 30
+        events += d.tick(t)
+    assert [e for e, _ in events] == ["resumed"]
+    assert d.state == STATE_RUNNING and d.cycle["gaps"] == []
 
 
 def test_door_in_the_middle_is_ignored():

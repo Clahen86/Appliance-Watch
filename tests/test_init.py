@@ -88,6 +88,8 @@ async def test_discovery(hass: HomeAssistant) -> None:
 
 
 async def test_a_whole_cycle(hass: HomeAssistant, freezer: FrozenDateTimeFactory) -> None:
+    await hass.config.async_set_time_zone("Europe/Copenhagen")
+    freezer.move_to("2026-11-06 12:00:00+01:00")  # not in the quiet hours (pushes wait for the morning then)
     notify = async_mock_service(hass, "notify", "mobile_app_telefon")
     entry = await _setup(hass)
     hub = hass.data[DOMAIN]
@@ -191,6 +193,8 @@ async def test_door_sensor(hass: HomeAssistant, freezer) -> None:
     await _run(hass, freezer, 12, 1)
     hass.states.async_set("binary_sensor.opvask_dor", "on", {"device_class": "door"})
     await hass.async_block_till_done()
+    # A minute into the rest it may still be a pause; nothing happens after the door, so it was done and emptied.
+    await _run(hass, freezer, 12, 10)
     assert entry.runtime_data.state == "off"
     assert len(entry.runtime_data.cycles) == 1
     assert entry.runtime_data.cycles[0]["end_reason"] == "door"

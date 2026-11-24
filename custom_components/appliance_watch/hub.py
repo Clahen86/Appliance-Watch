@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 from pathlib import Path
 import re
+import time
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components import frontend, panel_custom
@@ -14,9 +16,11 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, Event, HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util, slugify
 
+from . import prices
 from .const import (
     ACTION_EMPTIED,
     CONF_KIND,
@@ -28,6 +32,12 @@ from .const import (
     SET_FINISH_AFTER_DRY,
     SET_NOTIFY,
     SET_ONLY_HOME,
+    SET_PEAK_ADD,
+    SET_PEAK_FROM,
+    SET_PEAK_TO,
+    SET_PRICE,
+    SET_PRICE_ADD,
+    SET_PRICE_VAT,
     STATE_FINISHED,
     STATE_FINISHING,
     STATE_RUNNING,
@@ -41,6 +51,8 @@ _LOGGER = logging.getLogger(__name__)
 STATIC = "/appliance_watch_static"
 PANEL = "appliance-watch"
 SIGNAL_ALL = f"{DOMAIN}_all"
+# Pushes held in the quiet hours (only the latest per machine is sent when they end). Alarms always go at once.
+HOLD = ("done", "remind", "start", "resumed")
 _TITLES = {"da": "Maskiner", "de": "Geräte", "sv": "Maskiner", "nb": "Maskiner", "nl": "Apparaten", "fr": "Appareils"}
 SENTENCES = [
     "hvornår er {maskine} færdig",
@@ -58,10 +70,30 @@ SENTENCES = [
 ]
 
 
+# Short words that are part of other words: only as a whole word ("plug_four" isn't an oven, "blender" no printer) or at
+# the start of one ("kylskåp", not "skylight"; "klipper", not "hækklipper"). The rest are found anywhere ("kummefryser").
+_WHOLE_WORDS = {"four", "ender", "oven"}  # "oven": not "ovenpå" (upstairs) or "ovenlys"
+_WORD_START = {"kyl", "dish", "druck", "klipper", "frys", "cafe", "café", "bread"}
+_NOT_LETTER_BEFORE, _NOT_LETTER_AFTER = r"(?<![^\W\d_])", r"(?![^\W\d_])"
+
+
+# "four" after these is a number (the fourth socket of a power strip), not the French oven.
+_NUMBERED = re.compile(r"(?:plug|outlet|socket|channel|relay|switch|port|strip|stik|kanal|udtag)[\s_-]*$")
+
+
+def _has_word(text: str, word: str) -> bool:
+    if word in _WHOLE_WORDS:
+        return any(not (word == "four" and _NUMBERED.search(text[:m.start()]))
+                   for m in re.finditer(_NOT_LETTER_BEFORE + re.escape(word) + _NOT_LETTER_AFTER, text))
+    if word in _WORD_START:
+        return re.search(_NOT_LETTER_BEFORE + re.escape(word), text) is not None
+    return word in text
+
+
 def guess_kind(*names: str | None) -> str:
     text = " ".join(n for n in names if n).lower()
     for kind in KIND_ORDER:  # the more particular first: "vaske-tørre" before "vask", "tørretumbler" before "vask"
-        if any(w in text for w in KIND_WORDS[kind]):
+        if any(_has_word(text, w) for w in KIND_WORDS[kind]):
             return kind
     return KIND_OTHER
 
@@ -73,6 +105,8 @@ class Hub:
         self.settings: dict[str, Any] = dict(DEFAULT_SETTINGS)
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"{DOMAIN}.settings")
         self._unsubs: list[Any] = []
+        self._minute_unsub: Any = None
+        self._prices: tuple[Any, float | None, str | None, list[Any]] | None = None
 
     async def async_setup(self) -> None:
         self.settings = {**DEFAULT_SETTINGS, **(await self._store.async_load() or {})}
@@ -101,6 +135,7 @@ class Hub:
         self.machines[machine.entry.entry_id] = machine
         if first:
             self.speaker.start()
+            self._minute_unsub = async_track_time_change(self.hass, self._minute, second=5)
             await panel_custom.async_register_panel(
                 self.hass,
                 frontend_url_path=PANEL,
@@ -116,7 +151,13 @@ class Hub:
         if not self.machines:
             frontend.async_remove_panel(self.hass, PANEL)
             self.speaker.stop()
+            self._stop_minute()
         self.async_changed()
+
+    def _stop_minute(self) -> None:
+        if self._minute_unsub is not None:
+            self._minute_unsub()
+            self._minute_unsub = None
 
     @callback
     def async_changed(self) -> None:
@@ -127,9 +168,24 @@ class Hub:
             if key in DEFAULT_SETTINGS:
                 self.settings[key] = value
         await self._store.async_save(self.settings)
+        self._prices = None
         for m in self.machines.values():
             m.detector.finish_after_drying = bool(self.settings.get(SET_FINISH_AFTER_DRY))
         self.async_changed()
+
+    # ---------- prices ----------
+
+    def price_info(self) -> tuple[Any, float | None, str | None, list[Any]]:
+        """(key, price now, currency, coming prices) - worked out once per quarter hour or when the chosen price
+        sensor changes, not on every power reading (finding them goes through all of Home Assistant's states)."""
+        src = self.settings.get(SET_PRICE)
+        state = self.hass.states.get(src) if src and src != prices.EP else None
+        key = (int(time.time() // 900), src, state.last_updated if state else None,
+               tuple(self.settings.get(k) for k in (SET_PRICE_ADD, SET_PRICE_VAT, SET_PEAK_ADD, SET_PEAK_FROM, SET_PEAK_TO)))
+        if self._prices is None or self._prices[0] != key:
+            price, currency = prices.current(self.hass, self.settings)
+            self._prices = (key, price, currency, prices.forecast(self.hass, self.settings))
+        return self._prices
 
     # ---------- notifications ----------
 
@@ -167,10 +223,21 @@ class Hub:
                 return False
         return False
 
-    async def async_notify(self, machine: Machine, title: str, message: str, emptied: bool = False) -> None:
+    def quiet_now(self) -> bool:
+        return self.speaker.quiet_now()
+
+    async def async_notify(self, machine: Machine, title: str, message: str, emptied: bool = False,
+                           hold: str | None = None) -> bool:
+        """Push it to the phones. Returns whether it went out. hold ("done", "remind", "start", "resumed"): in the
+        quiet hours it waits, and only the latest per machine is sent when they end."""
         if self._house_chat_tells():
-            return
-        for service in self.targets():
+            return False
+        if hold in HOLD and self.quiet_now():
+            machine.hold_push(hold, title, message, emptied)
+            return False
+        services = self.targets()
+        sent = False
+        for service in services:
             data: dict[str, Any] = {"title": title, "message": message}
             if service.startswith("notify.mobile_app_"):
                 extra: dict[str, Any] = {"tag": f"aw_{machine.entry.entry_id}", "group": DOMAIN,
@@ -181,8 +248,19 @@ class Hub:
             domain, name = service.split(".", 1)
             try:
                 await self.hass.services.async_call(domain, name, data, blocking=False)
+                sent = True
             except Exception:  # noqa: BLE001 - one phone gone doesn't stop the others
                 _LOGGER.warning("Could not notify %s", service, exc_info=True)
+        return sent
+
+    @callback
+    def _minute(self, _now: datetime) -> None:
+        """When the quiet hours are over: the pushes held in the night go out (the latest per machine)."""
+        if self.quiet_now():
+            return
+        for m in list(self.machines.values()):
+            if m.held is not None:
+                self.hass.async_create_task(m.async_send_held(), eager_start=False)
 
     async def async_clear(self, machine: Machine) -> None:
         for service in self.targets():
@@ -316,6 +394,7 @@ class Hub:
 
     async def async_unload(self) -> None:
         self.speaker.stop()
+        self._stop_minute()
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()

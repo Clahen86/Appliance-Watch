@@ -57,3 +57,26 @@ async def test_energy_pilots_total_price_is_used_when_there(hass: HomeAssistant)
     assert len(rows) == 6 and rows[0][2] == 2.0
     price, cur = prices.current(hass, {})
     assert price == 2.0 and cur == "kr"
+
+
+def test_a_day_with_25_hours_lands_on_the_right_hours() -> None:
+    """The last Sunday of October has 25 hours in Denmark: a bare list of 25 prices, the last one at 23:00."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    cph = ZoneInfo("Europe/Copenhagen")
+    day0 = datetime(2026, 10, 25, tzinfo=cph)
+    out = prices.parse({"today": [float(i) for i in range(25)]}, day0)
+    local = {dt_util.as_local(t).astimezone(cph).strftime("%H:%M %Z"): p for t, p in out.items()}
+    assert local["23:00 CET"] == 24.0
+    assert local["02:00 CEST"] == 2.0 and local["02:00 CET"] == 3.0
+    quarters = prices.parse({"today": [1.0] * 100}, day0)
+    assert dt_util.as_local(max(quarters)).astimezone(cph).strftime("%H:%M") == "23:45"
+
+
+def test_price_at_finds_the_row() -> None:
+    now = dt_util.utcnow().replace(minute=0, second=0, microsecond=0)
+    rows = [(now + timedelta(minutes=15 * i), now + timedelta(minutes=15 * (i + 1)), float(i)) for i in range(96)]
+    assert prices._price_at(rows, now + timedelta(minutes=31)) == 2.0
+    assert prices._price_at(rows, now - timedelta(minutes=1)) is None
+    assert prices._price_at(rows, now + timedelta(hours=25)) is None
